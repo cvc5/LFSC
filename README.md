@@ -1,4 +1,5 @@
-# LFSC Checker: A High-Performance LFSC Proof Checker.
+# LFSC Checker
+## A High-Performance LFSC Proof Checker
 
 Authors: Andy Reynolds and Aaron Stump
 
