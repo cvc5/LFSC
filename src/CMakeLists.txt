@@ -1,4 +1,4 @@
-set(lfsc_src_files
+set(srcfiles
     check.cpp
     code.cpp
     expr.cpp
@@ -9,33 +9,33 @@ set(lfsc_src_files
     sccwriter.cpp
     trie.cpp)
 
-add_library (objlib OBJECT ${lfsc_src_files})
+add_library (objlib OBJECT ${srcfiles})
 set_property (TARGET objlib PROPERTY POSITION_INDEPENDENT_CODE ON)
 
-add_executable (lfsc_checker $<TARGET_OBJECTS:objlib> main.cpp)
-install (TARGETS lfsc_checker
+add_executable (lfscc $<TARGET_OBJECTS:objlib> main.cpp)
+install (TARGETS lfscc
   DESTINATION "${CMAKE_INSTALL_PREFIX}/bin"
 )
 
-#add_library (liblfsc_checker SHARED $<TARGET_OBJECTS:objlib>)
-#set_target_properties (liblfsc_checker PROPERTIES
+#add_library (liblfscc SHARED $<TARGET_OBJECTS:objlib>)
+#set_target_properties (liblfscc PROPERTIES
 #  OUTPUT_NAME lfscc
 #  PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/lfscc.h"  
 #)
-#install (TARGETS liblfsc_checker
+#install (TARGETS liblfscc
 #  LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
 #  PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_PREFIX}/include"
 #)
 
-add_library (liblfsc_checker STATIC $<TARGET_OBJECTS:objlib>)
-set_target_properties (liblfsc_checker PROPERTIES
+add_library (liblfscc STATIC $<TARGET_OBJECTS:objlib>)
+set_target_properties (liblfscc PROPERTIES
   OUTPUT_NAME lfscc
   PUBLIC_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/lfscc.h"  
 )
-install (TARGETS liblfsc_checker
+install (TARGETS liblfscc
   ARCHIVE DESTINATION "${CMAKE_INSTALL_PREFIX}/lib"
   PUBLIC_HEADER DESTINATION "${CMAKE_INSTALL_PREFIX}/include"
 )
 
-target_link_libraries(lfsc_checker ${LIBRARIES})
+target_link_libraries(lfscc ${LIBRARIES})
 
