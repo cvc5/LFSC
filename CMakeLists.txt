@@ -20,7 +20,7 @@ endif()
 
 add_cxx_flag("-Wall")
 add_cxx_flag("-Wno-deprecated")
-add_cxx_flag("-std=c++11")
+add_cxx_flag("-std=gnu++11")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_cxx_flag("-g")
