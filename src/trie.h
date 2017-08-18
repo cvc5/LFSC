@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
+#include <cstddef>
 
 template<class Data>
 class Trie {

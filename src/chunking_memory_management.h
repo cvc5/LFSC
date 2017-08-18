@@ -17,6 +17,7 @@
 #define _chunking_memory_management_h_
 
 #include <assert.h>
+#include <cstddef>
 
 /************************************************************************
  * MACRO: ADD_CHUNKING_MEMORY_MANAGEMENT_H()

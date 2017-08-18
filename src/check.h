@@ -14,6 +14,7 @@
 #include <stack>
 #include <string>
 #include <map>
+#include <cstddef>
 
 // see the help message in main.cpp for explanation
 typedef struct args {

@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <cstddef>
 
 int sccwriter::exprCount = 0;
 int sccwriter::strCount = 0;

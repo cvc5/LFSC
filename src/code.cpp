@@ -1,6 +1,7 @@
 #include "check.h"
 #include "code.h"
 #include <string>
+#include <cstddef>
 
 #include "scccode.h"
 

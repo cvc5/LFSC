@@ -4,6 +4,7 @@
 #include "sccwriter.h"
 #include "libwriter.h"
 #include <time.h>
+#include <cstddef>
 
 using namespace std;
 

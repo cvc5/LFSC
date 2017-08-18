@@ -132,6 +132,7 @@ void libwriter::write_file()
     fsh << "#define LFSC_PROOF_LIB_H" << std::endl;
     fsh << std::endl;
     fsh << "#include <string>" << std::endl;
+    fsh << "#include <cstddef>" << std::endl;
     fsh << std::endl;
     fsh << "class LFSCProof{" << std::endl;
     fsh << "protected:" << std::endl;

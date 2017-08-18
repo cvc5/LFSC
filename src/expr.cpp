@@ -1,6 +1,7 @@
 #include "expr.h"
 #include <stdlib.h>
 #include <sstream>
+#include <cstddef>
 #ifdef _MSC_VER
 #include <algorithm>
 #endif

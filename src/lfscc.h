@@ -2,6 +2,7 @@
 #define LFSC_CHECKER_H
 
 #include <vector>
+#include <cstddef>
 
 class sccwriter;
 class libwriter;
