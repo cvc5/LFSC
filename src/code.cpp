@@ -197,33 +197,61 @@ Expr *read_code() {
         case 'i':
         {
           our_ungetc('i');
-          pref = eat_str("ifmarked",false);
+          pref = eat_str("if",false);
           if (pref)
-	          break;
+            break;
+          switch(our_getc())
+          {
+            case 'm':
+            {
+              our_ungetc('m');
+              pref = eat_str("marked",false);
+              if (pref){
+                pref->insert(0,"if");
+                break;
+              }
 #ifndef MARKVAR_32
-          Expr *e1 = read_code();
-          Expr *e2 = read_code();
-          Expr *e3 = read_code();
-          Expr *ret = new CExpr(IFMARKED, e1, e2, e3);
+              Expr *e1 = read_code();
+              Expr *e2 = read_code();
+              Expr *e3 = read_code();
+              Expr *ret = new CExpr(IFMARKED, e1, e2, e3);
 #else
-          int index = read_index();
-          Expr *e1 = read_code();
-          Expr *e2 = read_code();
-          Expr *e3 = read_code();
-          Expr *ret = NULL;
-          if( index>=1 && index<=32 )
-          {
-            ret = new CExpr( IFMARKED, new IntExpr( index-1 ), e1, e2, e3 );
-          }
-          else
-          {
-            std::cout << "Can't make IFMARKED with index = " << index << std::endl;
-          }
-          Expr::markedCount++;
-          //Expr *ret = new CExpr(IFMARKED, e1, e2, e3);
+              int index = read_index();
+              Expr *e1 = read_code();
+              Expr *e2 = read_code();
+              Expr *e3 = read_code();
+              Expr *ret = NULL;
+              if( index>=1 && index<=32 )
+              {
+                ret = new CExpr( IFMARKED, new IntExpr( index-1 ), e1, e2, e3 );
+              }
+              else
+              {
+                std::cout << "Can't make IFMARKED with index = " << index << std::endl;
+              }
+              Expr::markedCount++;
+              //Expr *ret = new CExpr(IFMARKED, e1, e2, e3);
 #endif
-          eat_char(')');
-          return ret;
+              eat_char(')');
+              return ret;
+            }
+            case 'e':
+            {
+              our_ungetc('e');
+              pref = eat_str("equal",false);
+              if (pref){
+                pref->insert(0,"if");
+                break;
+              }
+              Expr *e1 = read_code();
+              Expr *e2 = read_code();
+              Expr *e3 = read_code();
+              Expr *e4 = read_code();
+              Expr *ret = new CExpr(IFEQUAL, e1, e2, e3, e4);
+              eat_char(')');
+              return ret;
+            }
+          }
         }
         case 'm':
         {
@@ -886,6 +914,40 @@ Expr *check_code(Expr *_e) {
 		   +string("\n4. second expression's type: ")+tp3->toString());
     return tp2;
   }
+  case IFEQUAL:
+  {
+    SymSExpr *tp0 = (SymSExpr *)check_code(e->kids[0]);
+    if (tp0->getclass() != SYMS_EXPR || tp0->val){
+      string errstr0 = (string("\"ifequal\" is used with a first expression which ")
+		      +string("cannot be a lambda-bound variable.\n")
+		      +string("1. the expression :")
+		      +e->kids[0]->toString()
+		      +string("\n2. its type: ")+tp0->toString());
+      report_error(errstr0);
+    }
+
+    SymSExpr *tp1 = (SymSExpr *)check_code(e->kids[1]);
+
+    if (tp1->getclass() != SYMS_EXPR || tp1->val){
+      string errstr1 = (string("\"ifequal\" is used with a second expression which ")
+		      +string("cannot be a lambda-bound variable.\n")
+		      +string("1. the expression :")
+		      +e->kids[1]->toString()
+		      +string("\n2. its type: ")+tp1->toString());
+      report_error(errstr1);
+    }
+
+    SymSExpr *tpc1 = (SymSExpr *)check_code(e->kids[2]);
+    SymSExpr *tpc2 = (SymSExpr *)check_code(e->kids[3]);
+    if (tpc1->getclass() != SYMS_EXPR || tpc1->val || tpc1 != tpc2)
+      report_error(string("\"ifequal\" used with expressions that do not ")
+       +string("have equal simple datatypes\nfor their types.\n")
+		   +string("\n1. first expression: ")+e->kids[3]->toString()
+		   +string("\n2. second expression: ")+e->kids[4]->toString()
+		   +string("\n3. first expression's type: ")+tpc1->toString()
+		   +string("\n4. second expression's type: ")+tpc2->toString());
+    return tpc1;
+  }
   case MATCH:
   {
     SymSExpr *scruttp = (SymSExpr *)check_code(e->kids[0]);
@@ -1213,6 +1275,26 @@ Expr *run_code(Expr *_e) {
       goto start_run_code;
     }
     //else
+    r2->dec();
+    _e = e->kids[3];
+    goto start_run_code;
+  }
+  case IFEQUAL: {
+    Expr *r1 = run_code(e->kids[0]);
+    if (!r1)
+      return NULL;
+    Expr *r2 = run_code(e->kids[1]);
+    if (!r2)
+      return NULL;
+    if( r1->defeq(r2) )
+    {
+      r1->dec();
+      r2->dec();
+      _e = e->kids[2];
+      goto start_run_code;
+    }
+    // else
+    r1->dec();
     r2->dec();
     _e = e->kids[3];
     goto start_run_code;

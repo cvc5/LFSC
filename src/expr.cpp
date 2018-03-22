@@ -937,6 +937,11 @@ void Expr::print(ostream &os) {
     print_kids(os,e->kids);
     os << ")";
     break;
+  case IFEQUAL:
+    os << "(ifequal";
+    print_kids(os,e->kids);
+    os << ")";
+    break;
   case MARKVAR: 
     os << "(markvar";
     print_kids(os,e->kids);

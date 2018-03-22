@@ -11,9 +11,9 @@
 #include "chunking_memory_management.h"
 #include "gmp.h"
 
-#define USE_FLAT_APP  //AJR: off deprecated
-#define MARKVAR_32
-//#define DEBUG_SYM_NAMES
+#define USE_FLAT_APP  //AJR: must be enabled
+#define MARKVAR_32    //AJR: must be enabled
+#define DEBUG_SYM_NAMES
 //#define DEBUG_SYMS
 
 // Expr class
@@ -52,7 +52,8 @@ enum { NOT_CEXPR = 0, // for INT_EXPR, HOLE_EXPR, SYM_EXPR, SYMS_EXPR
        FAIL,
        MARKVAR,
        IFMARKED,
-       COMPARE
+       COMPARE,
+       IFEQUAL
 };
 
 class Expr;
