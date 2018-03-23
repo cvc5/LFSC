@@ -200,7 +200,8 @@ Expr *read_code() {
           pref = eat_str("if",false);
           if (pref)
             break;
-          switch(our_getc())
+          char c;
+          switch(c = our_getc())
           {
             case 'm':
             {
@@ -251,7 +252,12 @@ Expr *read_code() {
               eat_char(')');
               return ret;
             }
+            default:
+              our_ungetc(c);
+              pref = new string("if");
+              break;
           }
+          break;
         }
         case 'm':
         {
