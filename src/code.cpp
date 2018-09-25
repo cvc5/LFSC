@@ -35,8 +35,14 @@ string *eat_str(const char *str, bool check_end = true) {
   return 0;
 }
 
+// Returns null on "default"
 SymSExpr *read_ctor() {
   string id(prefix_id());
+
+  if ( id == "default" ) {
+      return nullptr;
+  }
+
 #ifdef USE_HASH_TABLES
   Expr *s = symbols[id];
   Expr *stp = symbol_types[id];
@@ -98,29 +104,11 @@ Expr *read_case() {
     }
     break;
   }
-  // default case
-  case 'd': {
-    our_ungetc('d');
-    string * already_read = eat_str("default");
-    if ( already_read != nullptr ) {
-      // Put the parts of "default" that we read back into the token stream so
-      // they can be reparsed
-      for (auto i = already_read->crbegin(); i != already_read->crend(); ++i) {
-          our_ungetc(*i);
-      }
-      // Could be an id
-      pat = read_ctor();
-      delete already_read;
-    } else {
-      // Success! This is `default`
-    }
-    break;
-  }
   case EOF:
     report_error("Unexpected end of file parsing a pattern.");
     break;
   default:
-    // could be an identifier
+    // could be an identifier or "default"
     our_ungetc(d);
     pat = read_ctor();
     break;
