@@ -7,6 +7,12 @@
 
 using namespace std;
 
+// Tries to pull `str` out of the character stream
+// If it fails, returns an (owned) string representing what was pulled from the
+// string, a prefix of `str`.
+// If it succeeds, returns null.
+//
+// If `check_end` is set, verifies that the word ends after what was parsed.
 string *eat_str(const char *str, bool check_end = true) {
   string *s = new string();
   char c, d;
@@ -94,9 +100,22 @@ Expr *read_case() {
   }
   // default case
   case 'd': {
-    delete eat_str("efault");
-  }
+    our_ungetc('d');
+    string * already_read = eat_str("default");
+    if ( already_read != nullptr ) {
+      // Put the parts of "default" that we read back into the token stream so
+      // they can be reparsed
+      for (auto i = already_read->crbegin(); i != already_read->crend(); ++i) {
+          our_ungetc(*i);
+      }
+      // Could be an id
+      pat = read_ctor();
+      delete already_read;
+    } else {
+      // Success! This is `default`
+    }
     break;
+  }
   case EOF:
     report_error("Unexpected end of file parsing a pattern.");
     break;

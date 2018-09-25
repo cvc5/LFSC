@@ -16,6 +16,8 @@
 #include <map>
 #include <cstddef>
 
+#define OUR_GETC_BUF_CAPACITY 16
+
 // see the help message in main.cpp for explanation
 typedef struct args {
   std::vector<std::string> files;
@@ -39,7 +41,8 @@ void check_file(const char *_filename, args a, sccwriter* scw = NULL, libwriter*
 
 void cleanup();
 
-extern char our_getc_c;
+extern int our_getc_buf_size;
+extern char our_getc_buf[OUR_GETC_BUF_CAPACITY];
 
 void report_error(const std::string &);
 
@@ -49,9 +52,10 @@ extern const char *filename;
 extern FILE *curfile;
 
 inline void our_ungetc(char c) {
-  if (our_getc_c != 0)
+  if (our_getc_buf_size >= OUR_GETC_BUF_CAPACITY)
     report_error("Internal error: our_ungetc buffer full");
-  our_getc_c = c;
+  our_getc_buf[our_getc_buf_size] = c;
+  our_getc_buf_size += 1;
   if (c == '\n') {
     linenum--;
     colnum=-1;
@@ -62,9 +66,9 @@ inline void our_ungetc(char c) {
 
 inline char our_getc() {
   char c;
-  if (our_getc_c > 0) {
-    c = our_getc_c;
-    our_getc_c = 0;
+  if (our_getc_buf_size > 0) {
+    our_getc_buf_size -= 1;
+    c = our_getc_buf[our_getc_buf_size];
   }
   else{
 #ifndef __linux__

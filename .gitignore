@@ -8,6 +8,7 @@
 /stamp-h1
 .dep
 Makefile.in
+build
 /configure
 /aclocal.m4
 *~

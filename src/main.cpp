@@ -31,7 +31,7 @@ static void parse_args(int argc, char **argv, args &a)
       cout << "--compile-scc-debug: compile debug versions of side condition code\n"; 
       cout << "--run-scc: use compiled side condition code\n"; 
       exit(0);
-    }	  
+    }
     else if(strcmp("--show-runs", *argv) == 0) {
       argc--; argv++;
       a.show_runs = true;
