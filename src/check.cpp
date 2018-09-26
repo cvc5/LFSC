@@ -82,8 +82,7 @@ Expr *call_run_code(Expr *code) {
   return computed_result;
 }
 
-int our_getc_buf_size = 0;
-char our_getc_buf[OUR_GETC_BUF_CAPACITY];
+char our_getc_c = 0;
 
 int IDBUF_LEN = 2048;
 char idbuf[2048];
