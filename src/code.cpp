@@ -452,6 +452,7 @@ Expr *read_code() {
 	              pref = new string("mp_");
 	              break;
 	            }
+                    break;
             }
             default:
               our_ungetc(c);
