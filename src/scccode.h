@@ -5,7 +5,6 @@
 
 void init_compiled_scc();
 
-Expr* run_compiled_scc( Expr* p, std::vector< Expr* >& args );
+Expr* run_compiled_scc(Expr* p, std::vector<Expr*>& args);
 
 #endif
-
