@@ -350,6 +350,7 @@ Expr *read_code()
                   pref = new string("ma");
                   break;
               }
+              break;
             }
             case 'p':
             {
