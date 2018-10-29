@@ -965,6 +965,9 @@ void sccwriter::write_expr(
     ss2 << ss.str().c_str();
     write_code(code, os, ind, ss2.str().c_str(), opts);
 
+    expr = std::string(ss.str().c_str());
+    vars.push_back(expr);
+
     // if is not a sym expression, then decrement the expression and return null
     if (opts & opt_write_check_sym_expr)
     {
@@ -976,9 +979,6 @@ void sccwriter::write_expr(
       indent(os, ind);
       os << "}" << std::endl;
     }
-
-    expr = std::string(ss.str().c_str());
-    vars.push_back(expr);
   }
   // increment the counter for memory management
   // indent( os, ind );
