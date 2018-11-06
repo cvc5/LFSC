@@ -1,0 +1,4 @@
+; Deps: bool.plf
+
+(program bool_or_3 ((a bool) (b bool) (c bool)) bool
+         (bool_or (bool_or a b) c))

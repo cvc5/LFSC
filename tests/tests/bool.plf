@@ -1,0 +1,8 @@
+(declare bool type)
+(declare tt bool)
+(declare ff bool)
+
+(program bool_or ((a bool) (b bool)) bool
+         (match a
+                (tt tt)
+                (ff b)))
