@@ -2,6 +2,8 @@
 
 Test files should be valid LFSC input files.
 
+They should be in the `tests/tests` folder, AND in the `tests/CMakeLists.txt` file.
+
 They will pass if LFSCC returns 0 on them, and fail otherwise.
 
 They may include comments of the form:

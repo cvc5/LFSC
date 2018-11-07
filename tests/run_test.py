@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import re
 import os.path
@@ -104,13 +104,12 @@ def main():
     configuration = TestConfiguration()
     cmd = [configuration.lfscc] + configuration.dep_graph.getPathsInOrder()
     print('Command: ', cmd)
-    result = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-    code = result.returncode
-    if (code != 0):
-        if result.stdout:
-            print(result.stdout.decode('utf-8'))
-        if result.stderr:
-            print(result.stderr.decode('utf-8'), file=sys.stderr)
+    result = subprocess.Popen(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+    code = result.wait()
+    if 0 != code:
+        stdout = result.stdout.read()
+        if stdout:
+            print(stdout)
     return code
 
 if __name__ == '__main__':
