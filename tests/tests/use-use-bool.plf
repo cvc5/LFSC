@@ -1,0 +1,4 @@
+; Deps: use-bool.plf
+
+(program bool_or_4 ((a bool) (b bool) (c bool) (d bool)) bool
+         (bool_or (bool_or a b) (bool_or c d)))

@@ -31,6 +31,9 @@ else()
   message(FATAL_ERROR "Invalid build type '${CMAKE_BUILD_TYPE}'")
 endif()
 
+enable_testing()
+
 include_directories(src)
 add_subdirectory(src)
+add_subdirectory(tests)
 

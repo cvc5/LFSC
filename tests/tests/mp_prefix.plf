@@ -1,0 +1,5 @@
+(program mp_sub ((a mpz) (b mpz)) mpz
+         (mp_add a (mp_neg b)))
+
+(program my_zero ((a mpz)) mpz
+         (mp_sub a a))

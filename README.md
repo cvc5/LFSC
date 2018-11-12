@@ -58,6 +58,18 @@ proof                           the proof to check (.plf)
 opts_1...opts_n          options
 ```
 
+## Running Tests
+
+You can add tests in the `tests/tests` directory.
+
+Run them using `make test` in the build directory.
+
+You can also filter tests using regular expressions for example:
+
+```
+ctest -R sat.plf
+```
+
 ### Options:
 
 ```
