@@ -689,6 +689,7 @@ bool Expr::_free_in(Expr *x, expr_ptr_set_t *visited)
           return (s == x);
         }
         case INT_EXPR: return false;
+        case RAT_EXPR: return false;
       }
       break;
     case LAM:
