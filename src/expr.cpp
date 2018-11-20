@@ -792,8 +792,6 @@ void Expr::print(ostream &os)
         case RAT_EXPR:
         {
           RatExpr *e = (RatExpr *)this;
-          char *s = mpq_get_str(0, 10, e->n);
-          os << s;
           if (mpq_sgn(e->n) < 0)
           {
             os << "(~ ";
