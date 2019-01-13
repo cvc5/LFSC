@@ -129,7 +129,7 @@ inline const char *prefix_id()
 {
   int i = 0;
   char c = idbuf[i++] = non_ws();
-  while (!isspace(c) && c != '(' && c != ')' && c != char(EOF))
+  while (!isspace(c) && c != '(' && c != ')' && c != ';' && c != char(EOF))
   {
     if (i == IDBUF_LEN) report_error("Identifier is too long");
 

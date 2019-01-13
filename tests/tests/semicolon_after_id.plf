@@ -1,0 +1,11 @@
+; Deps: sat.plf
+
+
+(check
+  (% cheat (holds cln)
+     (: (holds cln)
+        cheat; hi
+     )
+  )
+)
+
