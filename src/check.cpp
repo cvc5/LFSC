@@ -1,4 +1,8 @@
 #include "check.h"
+
+#include <fstream>
+#include <iostream>
+
 #include "code.h"
 #include "expr.h"
 #include "libwriter.h"
@@ -22,7 +26,7 @@ using namespace __gnu_cxx;
 int linenum = 1;
 int colnum = 1;
 const char *filename = 0;
-FILE *curfile = 0;
+std::istream* curfile = 0;
 
 //#define USE_HASH_MAPS  //AJR: deprecated
 
@@ -160,7 +164,11 @@ start_check:
       char c = non_ws();
       switch (c)
       {
-        case EOF: report_error("Unexpected end of file."); break;
+        case std::istream::traits_type::eof():
+        {
+          report_error("Unexpected end of file.");
+          break;
+        }
         case '!':
         {  // the pi case
           string id(prefix_id());
@@ -836,7 +844,11 @@ start_check:
         }  // end application case
       }
     }
-    case EOF: report_error("Unexpected end of file."); break;
+    case std::istream::traits_type::eof():
+    {
+      report_error("Unexpected end of file.");
+      break;
+    }
 
     case '_':
       if (!is_hole)
@@ -984,10 +996,27 @@ int check_time;
 
 void check_file(const char *_filename, args a, sccwriter *scw, libwriter *lw)
 {
+  std::ifstream fs;
+  fs.open(_filename, std::fstream::in);
+  if (!fs.is_open())
+  {
+    report_error(string("Could not open file \"") + _filename
+                 + string("\" for reading.\n"));
+  }
+  check_file(fs, std::string(_filename), a, scw, lw);
+  fs.close();
+}
+
+void check_file(std::istream& in,
+                const std::string& _filename,
+                args a,
+                sccwriter* scw,
+                libwriter* lw)
+{
   int prev_linenum = linenum;
   int prev_colnum = colnum;
   const char *prev_filename = filename;
-  FILE *prev_curfile = curfile;
+  std::istream* prev_curfile = curfile;
 
   // from code.h
   dbg_prog = a.show_runs;
@@ -995,10 +1024,10 @@ void check_file(const char *_filename, args a, sccwriter *scw, libwriter *lw)
   tail_calls = !a.no_tail_calls;
 
   std::string f;
-  if (strcmp(_filename, "stdin") == 0)
+  if (_filename == "stdin")
   {
-    curfile = stdin;
-    f = std::string(_filename);
+    curfile = &std::cin;
+    f = _filename;
   }
   else
   {
@@ -1022,16 +1051,13 @@ void check_file(const char *_filename, args a, sccwriter *scw, libwriter *lw)
       std::string str = std::string(dirname(f_copy));
       free(f_copy);
 #endif
-      f = str + std::string("/") + std::string(_filename);
+      f = str + std::string("/") + filename;
     }
     else
     {
-      f = std::string(_filename);
+      f = _filename;
     }
-    curfile = fopen(f.c_str(), "r");
-    if (!curfile)
-      report_error(string("Could not open file \"") + f
-                   + string("\" for reading.\n"));
+    curfile = &in;
   }
 
   linenum = 1;
@@ -1039,7 +1065,7 @@ void check_file(const char *_filename, args a, sccwriter *scw, libwriter *lw)
   filename = f.c_str();
 
   char c;
-  while ((c = non_ws()) && c != EOF)
+  while ((c = non_ws()) && c != std::istream::traits_type::eof())
   {
     if (c == '(')
     {
@@ -1365,7 +1391,6 @@ void check_file(const char *_filename, args a, sccwriter *scw, libwriter *lw)
       }
     }
   }
-  if (curfile != stdin) fclose(curfile);
   linenum = prev_linenum;
   colnum = prev_colnum;
   filename = prev_filename;

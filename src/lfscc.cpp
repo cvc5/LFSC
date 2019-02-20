@@ -1,9 +1,12 @@
+#include <fstream>
+#include <iostream>
+
 #include "lfscc.h"
 #include "check.h"
 
 void lfscc_init(void) { init(); }
 
-void lfscc_check_file(const char* filename,
+void lfscc_check_file(std::istream& in,
                       bool show_runs,
                       bool no_tail_calls,
                       bool compile_scc,
@@ -22,7 +25,8 @@ void lfscc_check_file(const char* filename,
   a.run_scc = run_scc;
   a.use_nested_app = use_nested_app;
   a.compile_lib = compile_lib;
-  check_file(filename, a, scw, lw);
+  std::string filename("<stream>");
+  check_file(in, filename, a, scw, lw);
 }
 
 void lfscc_cleanup(void) { cleanup(); }
