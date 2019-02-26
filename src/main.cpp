@@ -123,11 +123,9 @@ int main(int argc, char **argv)
       lw = new libwriter;
     }
     /* process the files named */
-    int i = 0, iend = a.files.size();
-    for (; i < iend; i++)
+    for (const std::string& file : a.files)
     {
-      const char *filename = a.files[i].c_str();
-      check_file(filename, a, scw, lw);
+      check_file(file.c_str(), a, scw, lw);
     }
     if (scw)
     {

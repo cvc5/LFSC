@@ -12,6 +12,7 @@
 #endif
 
 #include <cstddef>
+#include <iosfwd>
 #include <map>
 #include <stack>
 #include <string>
@@ -41,6 +42,12 @@ void check_file(const char *_filename,
                 sccwriter *scw = NULL,
                 libwriter *lw = NULL);
 
+void check_file(std::istream& in,
+                const std::string& filename,
+                args a,
+                sccwriter* scw = NULL,
+                libwriter* lw = NULL);
+
 void cleanup();
 
 extern char our_getc_c;
@@ -50,7 +57,7 @@ void report_error(const std::string &);
 extern int linenum;
 extern int colnum;
 extern const char *filename;
-extern FILE *curfile;
+extern std::istream* curfile;
 
 inline void our_ungetc(char c)
 {
@@ -75,11 +82,7 @@ inline char our_getc()
   }
   else
   {
-#ifndef __linux__
-    c = fgetc(curfile);
-#else
-    c = fgetc_unlocked(curfile);
-#endif
+    c = curfile->get();
   }
   switch (c)
   {
@@ -89,7 +92,7 @@ inline char our_getc()
 #endif
       colnum = 1;
       break;
-    case char(EOF): break;
+    case std::istream::traits_type::eof(): break;
     default: colnum++;
   }
 
@@ -105,7 +108,7 @@ inline char non_ws()
   if (c == ';')
   {
     // comment to end of line
-    while ((c = our_getc()) != '\n' && c != char(EOF))
+    while ((c = our_getc()) != '\n' && c != std::istream::traits_type::eof())
       ;
     return non_ws();
   }
