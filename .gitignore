@@ -13,3 +13,4 @@ Makefile.in
 *~
 \#*\#
 *.swp
+build/*
