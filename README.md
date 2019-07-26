@@ -17,6 +17,8 @@ cmake ..
 make
 ```
 
+The executable, called `lfscc`, will be created in the build/src folder.
+
 Alternatively you can configure a regular build with
 
 ```bash
@@ -47,15 +49,15 @@ make
 ## Using LFSC checker
 
 ```
-lfsc [sig_1 .... sig_n] [proof] [opts_1...opts_n]
+lfscc [sig_1 .... sig_n] [proof] [opts_1...opts_n]
 ```
 
 with
 
 ```
-sig_1 .... sig_n            signature files (.plf)
-proof                           the proof to check (.plf)
-opts_1...opts_n          options
+sig_1 .... sig_n             signature files (.plf)
+proof                        the proof to check (.plf)
+opts_1...opts_n              options
 ```
 
 ## Running Tests
