@@ -802,7 +802,8 @@ Expr *check_code(Expr *_e)
     {
       Expr *tp0 = check_code(e->kids[0]);
       Expr *tp1 = check_code(e->kids[1]);
-
+      tp0 = tp0->followDefs();
+      tp1 = tp1->followDefs();
       if (tp0 != statMpz && tp0 != statMpq)
         report_error(string("Argument to mp_[arith] does not have type \"mpz\" "
                             "or \"mpq\".\n")
@@ -822,6 +823,7 @@ Expr *check_code(Expr *_e)
     case NEG:
     {
       Expr *tp0 = check_code(e->kids[0]);
+      tp0 = tp0->followDefs();
       if (tp0 != statMpz && tp0 != statMpq)
         report_error(
             string(
@@ -836,6 +838,7 @@ Expr *check_code(Expr *_e)
     case IFZERO:
     {
       Expr *tp0 = check_code(e->kids[0]);
+      tp0 = tp0->followDefs();
       if (tp0 != statMpz && tp0 != statMpq)
         report_error(
             string("Argument to mp_if does not have type \"mpz\" or \"mpq\".\n")
