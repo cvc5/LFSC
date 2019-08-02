@@ -718,16 +718,12 @@ start_check:
               eat_excess(prev);
               if (create)
               {
-#ifndef USE_FLAT_APP
-                headtrm = new CExpr(APP, headtrm, arg);
-#else
                 Expr *orig_headtrm = headtrm;
                 headtrm = Expr::make_app(headtrm, arg);
                 if (orig_headtrm->getclass() == CEXPR)
                 {
                   orig_headtrm->dec();
                 }
-#endif
                 consumed_arg = true;
               }
               if (var_in_range)

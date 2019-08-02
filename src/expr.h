@@ -11,8 +11,6 @@
 #include "chunking_memory_management.h"
 #include "gmp.h"
 
-#define USE_FLAT_APP  // AJR: must be enabled
-#define MARKVAR_32    // AJR: must be enabled
 #define DEBUG_SYM_NAMES
 //#define DEBUG_SYMS
 
@@ -365,7 +363,6 @@ class SymExpr : public Expr
 
   virtual ~SymExpr() {}
 
-#ifdef MARKVAR_32
  private:
   int mark();
   void smark(int m);
@@ -374,7 +371,6 @@ class SymExpr : public Expr
   int getmark(int i = 0) { return (mark() >> i) & 1; }
   void setmark(int i = 0) { smark(mark() | (1 << i)); }
   void clearmark(int i = 0) { smark(mark() & ~(1 << i)); }
-#endif
 };
 
 class SymSExpr : public SymExpr
