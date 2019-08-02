@@ -844,7 +844,6 @@ Expr *check_code(Expr *_e)
 
       SymSExpr *tp1 = (SymSExpr *)check_code(e->kids[1]);
       SymSExpr *tp2 = (SymSExpr *)check_code(e->kids[2]);
-      std::cout << tp1->getclass() << " != " << SYMS_EXPR << " " << tp1->val << " " << tp1 << " != " << tp2 << std::endl;
       if (tp1->getclass() != SYMS_EXPR || tp1->val || tp1 != tp2)
         report_error(
             string("\"mp_if\" used with expressions that do not ")
