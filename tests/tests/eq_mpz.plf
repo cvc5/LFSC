@@ -1,0 +1,7 @@
+(declare bool type)
+(declare tt bool)
+(declare ff bool)
+
+
+(program eq_mpz ((x mpz) (y mpz) (b bool)) bool
+  (ifequal x y tt ff))

@@ -983,7 +983,6 @@ Expr *check_code(Expr *_e)
             + string("\n2. second expression: ") + e->kids[1]->toString()
             + string("\n3. first expression's type: ") + tp0->toString()
             + string("\n4. second expression's type: ") + tp1->toString());
-        report_error(errstr1);
       }
 
       SymSExpr *tpc1 = (SymSExpr *)check_code(e->kids[2]);
