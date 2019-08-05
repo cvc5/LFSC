@@ -391,7 +391,6 @@ void sccwriter::write_code(
           }
           else
           {
-#ifdef USE_FLAT_APP
             std::string expr;
             write_expr(hd, os, ind, expr);
             indent(os, ind);
@@ -406,27 +405,6 @@ void sccwriter::write_code(
               }
             }
             os << " );" << std::endl;
-#else
-            std::string expr;
-            write_expr(hd, os, ind, expr);
-            indent(os, ind);
-            os << retModString;
-            for (int a = 0; a < (int)args.size(); a++)
-            {
-              os << "new CExpr( APP, ";
-            }
-            os << expr.c_str() << ", ";
-            for (int a = 0; a < (int)args.size(); a++)
-            {
-              os << args[a].c_str();
-              os << " )";
-              if (a != (int)(args.size() - 1))
-              {
-                os << ", ";
-              }
-            }
-            os << ";" << std::endl;
-#endif
             // indent( os, ind );
             // os << expr.c_str() << "->dec();" << std::endl;
           }
@@ -475,14 +453,6 @@ void sccwriter::write_code(
               std::ostringstream ssargs;
               ssargs << "args" << argsCount;
               argsCount++;
-#ifndef USE_FLAT_APP
-              indent(os, ind + 1);
-              os << "std::vector< Expr* > " << ssargs.str().c_str() << ";"
-                 << std::endl;
-              indent(os, ind + 1);
-              os << expr.c_str() << "->followDefs()->collect_args( "
-                 << ssargs.str().c_str() << " );" << std::endl;
-#endif
               // set the variables defined in the pattern equal to the arguments
               std::vector<Expr*> caseArgs;
               ((CExpr*)((CExpr*)code)->kids[a + 1])
@@ -493,13 +463,8 @@ void sccwriter::write_code(
                 indent(os, ind + 1);
                 os << "Expr* ";
                 write_variable(((SymSExpr*)caseArgs[b])->s.c_str(), os);
-#ifdef USE_FLAT_APP
                 os << " = ((CExpr*)" << expr.c_str() << "->followDefs())->kids["
                    << b + 1 << "];" << std::endl;
-#else
-                os << " = " << ssargs.str().c_str() << "[" << b << "];"
-                   << std::endl;
-#endif
                 vars.push_back(((SymSExpr*)caseArgs[b])->s);
               }
               // write the body of the case
@@ -590,56 +555,6 @@ void sccwriter::write_code(
           os << retModString.c_str() << "NULL;" << std::endl;
         }
         break;
-#ifndef MARKVAR_32
-        case MARKVAR:
-        {
-          // calculate the value for the expression
-          std::string expr;
-          write_expr(
-              ((CExpr*)code)->kids[0], os, ind, expr, opt_write_check_sym_expr);
-          // set the mark on the expression
-          indent(os, ind);
-          os << "if (" << expr.c_str() << "->followDefs()->getmark())"
-             << std::endl;
-          indent(os, ind + 1);
-          os << expr.c_str() << "->followDefs()->clearmark();" << std::endl;
-          indent(os, ind);
-          os << "else" << std::endl;
-          indent(os, ind + 1);
-          os << expr.c_str() << "->followDefs()->setmark();" << std::endl;
-          // write the return if necessary
-          if (retModStr != NULL)
-          {
-            indent(os, ind);
-            os << retModString.c_str() << expr.c_str() << ";" << std::endl;
-            indent(os, ind);
-            os << incString.c_str() << std::endl;
-          }
-          write_dec(expr, os, ind);
-        }
-        break;
-        case IFMARKED:
-        {
-          // calculate the value for the expression
-          std::string expr;
-          write_expr(
-              ((CExpr*)code)->kids[0], os, ind, expr, opt_write_check_sym_expr);
-          // if mark is set, write code for kids[1]
-          indent(os, ind);
-          os << "if (" << expr.c_str() << "->followDefs()->getmark()){"
-             << std::endl;
-          write_code(((CExpr*)code)->kids[1], os, ind + 1, retModStr);
-          // else write code for kids[2]
-          indent(os, ind);
-          os << "}else{" << std::endl;
-          write_code(((CExpr*)code)->kids[2], os, ind + 1, retModStr);
-          indent(os, ind);
-          os << "}" << std::endl;
-          // clean up memory
-          write_dec(expr, os, ind);
-        }
-        break;
-#else
         case MARKVAR:
         {
           // calculate the value for the expression
@@ -751,7 +666,6 @@ void sccwriter::write_code(
           write_dec(expr, os, ind);
         }
         break;
-#endif
         case ADD:
         case MUL:
         case DIV:
