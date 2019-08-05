@@ -1317,16 +1317,19 @@ void check_file(std::istream& in,
 
           statType->inc();
           int prev = open_parens;
-          Expr *progtp = check(true, statType, &tmp, 0, true);
+          // read the return type of the program
+          Expr* progtpret = check(true, statType, &tmp, 0, true);
           eat_excess(prev);
 
-          if (!progtp->isDatatype())
+          if (!progtpret->isDatatype())
             report_error(string("Return type for a program is not a")
                          + string(" datatype.\n1. the type: ")
-                         + progtp->toString());
+                         + progtpret->toString());
 
           Expr *progcode = read_code();
 
+          // now, construct the type of the program
+          Expr* progtp = progtpret;
           for (int i = vars.size() - 1, iend = 0; i >= iend; i--)
           {
             vars[i]->inc();  // used below for the program code (progcode)
@@ -1338,7 +1341,16 @@ void check_file(std::istream& in,
           // 0.
           prog->val = new CExpr(PROG, progtp);
 
-          check_code(progcode);
+          Expr* rettp = check_code(progcode);
+
+          // check that the body matches the return type
+          if (!rettp->defeq(progtpret))
+          {
+            report_error(
+                string("Return type for a program does not match")
+                + string(" its body.\n1. the type: ") + rettp->toString()
+                + string("\n2. the expected type: ") + progtpret->toString());
+          }
 
           progcode =
               new CExpr(PROG, progtp, new CExpr(PROGVARS, vars), progcode);
