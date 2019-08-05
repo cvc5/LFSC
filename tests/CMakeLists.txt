@@ -1,17 +1,18 @@
 set(lfsc_test_file_list
   bool.plf
+  issue20.plf
   mp_prefix.plf
   sat.plf
+  semicolon_after_id.plf
   smt.plf
   th_arrays.plf
   th_base.plf
-  th_bv_bitblast.plf
   th_bv.plf
+  th_bv_bitblast.plf
   th_int.plf
+  unused_pi_param_rational_in_body.plf
   use-bool.plf
   use-use-bool.plf
-  unused_pi_param_rational_in_body.plf
-  semicolon_after_id.plf
 )
 
 set(test_script ${CMAKE_CURRENT_LIST_DIR}/run_test.py)

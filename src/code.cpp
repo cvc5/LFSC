@@ -535,10 +535,18 @@ Expr *read_code()
       }
       // parse application
       if (pref)
-        // we have eaten part of the name of an applied identifier
-        pref->append(prefix_id());
+      {
+        // We have eaten part of the name (or all) of an applied identifier. We
+        // parse the rest of the identifier and append it. Note: we don't want
+        // `prefix_id()` to skip whitespace, otherwise we may accidentially
+        // parse the next identifier (if `pref` already holds the complete
+        // identifier) and add it to the current one.
+        pref->append(prefix_id(false));
+      }
       else
+      {
         pref = new string(prefix_id());
+      }
 
       Expr *ret = progs[*pref];
       if (!ret)

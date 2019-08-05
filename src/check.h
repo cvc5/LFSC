@@ -128,10 +128,17 @@ inline void eat_char(char expected)
 extern int IDBUF_LEN;
 extern char idbuf[];
 
-inline const char *prefix_id()
+/**
+ * Parses an identifier.
+ *
+ * @param skip_ws If true, skips the whitespace before the identifier. Expects
+ * the identifier to start at the current position otherwise.
+ * @return Pointer to the buffer holding the identifier string
+ */
+inline const char *prefix_id(bool skip_ws = true)
 {
   int i = 0;
-  char c = idbuf[i++] = non_ws();
+  char c = idbuf[i++] = skip_ws ? non_ws() : our_getc();
   while (!isspace(c) && c != '(' && c != ')' && c != ';' && c != char(EOF))
   {
     if (i == IDBUF_LEN) report_error("Identifier is too long");
