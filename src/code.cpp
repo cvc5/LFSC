@@ -974,15 +974,15 @@ Expr *check_code(Expr *_e)
       SymSExpr *tp0 = (SymSExpr *)check_code(e->kids[0]);
       SymSExpr *tp1 = (SymSExpr *)check_code(e->kids[1]);
 
-      if (tp0!=tp1)
+      if (tp0 != tp1)
       {
         report_error(
             string("\"ifequal\" used with compare expressions that do not ")
-            + string("have equal types\n")
-            + string("\n1. first expression: ") + e->kids[0]->toString()
-            + string("\n2. second expression: ") + e->kids[1]->toString()
-            + string("\n3. first expression's type: ") + tp0->toString()
-            + string("\n4. second expression's type: ") + tp1->toString());
+            + string("have equal types\n") + string("\n1. first expression: ")
+            + e->kids[0]->toString() + string("\n2. second expression: ")
+            + e->kids[1]->toString() + string("\n3. first expression's type: ")
+            + tp0->toString() + string("\n4. second expression's type: ")
+            + tp1->toString());
       }
 
       SymSExpr *tpc1 = (SymSExpr *)check_code(e->kids[2]);
