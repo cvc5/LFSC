@@ -1,0 +1,20 @@
+(declare bool type)
+(declare tt bool)
+(declare ff bool)
+
+
+(program eq_mpz ((x mpz) (y mpz) (b bool)) bool
+  (ifequal x y tt ff))
+
+(declare checked_mpz
+  (! b mpz type))
+
+(declare check_eq_mqz
+  (! x mpz
+  (! y mpz
+  (! b bool
+  (! u (^ (eq_mpz x y b) tt)
+    (checked_mpz x))))))
+
+(check
+  (: (checked_mpz 5) (check_eq_mqz 5 5 tt)))

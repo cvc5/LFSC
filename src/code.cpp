@@ -938,36 +938,27 @@ Expr *check_code(Expr *_e)
     case IFEQUAL:
     {
       SymSExpr *tp0 = (SymSExpr *)check_code(e->kids[0]);
-      if (tp0->getclass() != SYMS_EXPR || tp0->val)
-      {
-        string errstr0 =
-            (string("\"ifequal\" is used with a first expression which ")
-             + string("cannot be a lambda-bound variable.\n")
-             + string("1. the expression :") + e->kids[0]->toString()
-             + string("\n2. its type: ") + tp0->toString());
-        report_error(errstr0);
-      }
-
       SymSExpr *tp1 = (SymSExpr *)check_code(e->kids[1]);
 
-      if (tp1->getclass() != SYMS_EXPR || tp1->val)
+      if (tp0 != tp1)
       {
-        string errstr1 =
-            (string("\"ifequal\" is used with a second expression which ")
-             + string("cannot be a lambda-bound variable.\n")
-             + string("1. the expression :") + e->kids[1]->toString()
-             + string("\n2. its type: ") + tp1->toString());
-        report_error(errstr1);
+        report_error(
+            string("\"ifequal\" used with compare expressions that do not ")
+            + string("have equal types\n") + string("\n1. first expression: ")
+            + e->kids[0]->toString() + string("\n2. second expression: ")
+            + e->kids[1]->toString() + string("\n3. first expression's type: ")
+            + tp0->toString() + string("\n4. second expression's type: ")
+            + tp1->toString());
       }
 
       SymSExpr *tpc1 = (SymSExpr *)check_code(e->kids[2]);
       SymSExpr *tpc2 = (SymSExpr *)check_code(e->kids[3]);
       if (tpc1->getclass() != SYMS_EXPR || tpc1->val || tpc1 != tpc2)
         report_error(
-            string("\"ifequal\" used with expressions that do not ")
+            string("\"ifequal\" used with return expressions that do not ")
             + string("have equal simple datatypes\nfor their types.\n")
-            + string("\n1. first expression: ") + e->kids[3]->toString()
-            + string("\n2. second expression: ") + e->kids[4]->toString()
+            + string("\n1. first expression: ") + e->kids[2]->toString()
+            + string("\n2. second expression: ") + e->kids[3]->toString()
             + string("\n3. first expression's type: ") + tpc1->toString()
             + string("\n4. second expression's type: ") + tpc2->toString());
       return tpc1;
