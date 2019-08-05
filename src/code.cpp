@@ -723,7 +723,7 @@ Expr *check_code(Expr *_e)
               + string("\n2. its (functional) type: ") + cur->toString());
         if (argtps[i]->getop() == APP)
           argtps[i] = ((CExpr *)argtps[i])->kids[0];
-        if (argtps[i] != cur->kids[1])
+        if (!argtps[i]->defeq(cur->kids[1]))
         {
           char buf[1024];
           sprintf(buf, "%d", i);
