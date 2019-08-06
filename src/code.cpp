@@ -92,6 +92,13 @@ Expr *read_case()
       {
         our_ungetc(c);
         string varstr(prefix_id());
+        // To avoid non-termination in the case that the user has provided an
+        // illegal identifier here (such as a nested match pattern), we check
+        // whether the string read for the identifier is empty.
+        if( varstr.size()==0 )
+        {
+          report_error("Could not read identifier in a pattern of match expression. Note that nested match patterns are not supported.");
+        }
         SymSExpr *var = new SymSExpr(varstr);
         vars.push_back(var);
 #ifdef USE_HASH_MAPS
