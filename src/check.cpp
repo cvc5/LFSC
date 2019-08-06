@@ -337,7 +337,7 @@ start_check:
             eat_rparen();
 
             symbols->insert(id.c_str(), prevpr);
-            
+
             expected_domain
                 ->dec();  // because removed from the symbol table now
 

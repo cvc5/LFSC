@@ -176,7 +176,7 @@ Expr *read_code()
           Expr *t2 = read_code();
 
           symbols->insert(id.c_str(), prev);
-          
+
           eat_char(')');
           return new CExpr(LET, var, t1, t2);
         }
