@@ -160,12 +160,7 @@ typedef __gnu_cxx::hash_map<std::string, SymExpr *> symmap2;
 extern symmap2 progs;
 extern std::vector<Expr *> ascHoles;
 
-#ifdef USE_HASH_MAPS
-extern symmap symbols;
-extern symmap symbol_types;
-#else
 extern Trie<std::pair<Expr *, Expr *> > *symbols;
-#endif
 
 extern std::map<SymExpr *, int> mark_map;
 
