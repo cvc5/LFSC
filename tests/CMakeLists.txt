@@ -1,5 +1,6 @@
 set(lfsc_test_file_list
   bool.plf
+  eq_mpz.plf
   issue20.plf
   mp_prefix.plf
   sat.plf

@@ -209,12 +209,6 @@ Expr *Expr::clone()
 
 Expr *Expr::build_app(Expr *hd, const std::vector<Expr *> &args, int start)
 {
-#ifndef USE_FLAT_APP
-  Expr *ret = hd;
-  for (int i = start, iend = args.size(); i < iend; i++)
-    ret = new CExpr(APP, ret, args[i]);
-  return ret;
-#else
   if (start >= (int)args.size())
     return hd;
   else
@@ -226,7 +220,6 @@ Expr *Expr::build_app(Expr *hd, const std::vector<Expr *> &args, int start)
     kids[args.size() - start + 1] = NULL;
     return new CExpr(APP, true /* dummy */, kids);
   }
-#endif
 }
 
 Expr *Expr::make_app(Expr *e1, Expr *e2)
@@ -272,18 +265,6 @@ Expr *Expr::collect_args(std::vector<Expr *> &args, bool follow_defs)
   // cargCount++;
   // if( cargCount%1000==0)
   // std::cout << cargCount << std::endl;
-#ifndef USE_FLAT_APP
-  CExpr *e = (CExpr *)this;
-  args.reserve(16);
-  while (e->getop() == APP)
-  {
-    args.push_back(e->kids[1]);
-    e = (CExpr *)e->kids[0];
-    if (follow_defs) e = (CExpr *)e->followDefs();
-  }
-  std::reverse(args.begin(), args.end());
-  return e;
-#else
   CExpr *e = (CExpr *)this;
   args.reserve(16);
   if (e->getop() == APP)
@@ -300,7 +281,6 @@ Expr *Expr::collect_args(std::vector<Expr *> &args, bool follow_defs)
     return e->followDefs();
   else
     return e;
-#endif
 }
 
 Expr *Expr::get_head(bool follow_defs) const
@@ -605,10 +585,6 @@ bool Expr::defeq(Expr *e)
       return bodies_equal;
     }
     case APP:
-#ifndef USE_FLAT_APP
-      return (e1->kids[0]->defeq(e2->kids[0])
-              && e1->kids[1]->defeq(e2->kids[1]));
-#else
     {
       int counter = 0;
       while (e1->kids[counter])
@@ -643,7 +619,6 @@ bool Expr::defeq(Expr *e)
       }
       return e2->kids[counter] == NULL;
     }
-#endif
     case TYPE:
     case KIND:
     case MPZ:
@@ -1046,7 +1021,6 @@ bool Expr::isType(Expr *statType)
 }
 
 int SymExpr::symmCount = 0;
-#ifdef MARKVAR_32
 int SymExpr::mark()
 {
   if (mark_map.find(this) == mark_map.end())
@@ -1057,4 +1031,3 @@ int SymExpr::mark()
   return mark_map[this];
 }
 void SymExpr::smark(int m) { mark_map[this] = m; }
-#endif
