@@ -49,14 +49,9 @@ SymSExpr *read_ctor()
     return nullptr;
   }
 
-#ifdef USE_HASH_TABLES
-  Expr *s = symbols[id];
-  Expr *stp = symbol_types[id];
-#else
   pair<Expr *, Expr *> p = symbols->get(id.c_str());
   Expr *s = p.first;
   Expr *stp = p.second;
-#endif
 
   if (!stp) report_error("Undeclared identifier parsing a pattern.");
 
@@ -74,11 +69,7 @@ Expr *read_case()
   Expr *pat = NULL;
   vector<SymSExpr *> vars;
 
-#ifdef USE_HASH_MAPS
-  vector<Expr *> prevs;
-#else
   vector<pair<Expr *, Expr *> > prevs;
-#endif
   char d = non_ws();
   switch (d)
   {
@@ -94,23 +85,14 @@ Expr *read_case()
         string varstr(prefix_id());
         SymSExpr *var = new SymSExpr(varstr);
         vars.push_back(var);
-#ifdef USE_HASH_MAPS
-        prevs.push_back(symbols[varstr]);
-        symbols[varstr] = var;
-#else
         prevs.push_back(
             symbols->insert(varstr.c_str(), pair<Expr *, Expr *>(var, NULL)));
-#endif
-#ifndef USE_FLAT_APP
-        pat = new CExpr(APP, pat, var);
-#else
         Expr *orig_pat = pat;
         pat = Expr::make_app(pat, var);
         if (orig_pat->getclass() == CEXPR)
         {
           orig_pat->dec();
         }
-#endif
       }
       break;
     }
@@ -128,11 +110,7 @@ Expr *read_case()
   for (int i = 0, iend = prevs.size(); i < iend; i++)
   {
     string &s = vars[i]->s;
-#ifdef USE_HASH_MAPS
-    symbols[s] = prevs[i];
-#else
     symbols->insert(s.c_str(), prevs[i]);
-#endif
   }
 
   eat_char(')');
@@ -192,21 +170,13 @@ Expr *read_code()
 
           Expr *t1 = read_code();
 
-#ifdef USE_HASH_MAPS
-          Expr *prev = symbols[id];
-          symbols[id] = var;
-#else
           pair<Expr *, Expr *> prev =
               symbols->insert(id.c_str(), pair<Expr *, Expr *>(var, NULL));
-#endif
 
           Expr *t2 = read_code();
 
-#ifdef USE_HASH_MAPS
-          symbols[id] = prev;
-#else
           symbols->insert(id.c_str(), prev);
-#endif
+
           eat_char(')');
           return new CExpr(LET, var, t1, t2);
         }
@@ -227,12 +197,6 @@ Expr *read_code()
                 pref->insert(0, "if");
                 break;
               }
-#ifndef MARKVAR_32
-              Expr *e1 = read_code();
-              Expr *e2 = read_code();
-              Expr *e3 = read_code();
-              Expr *ret = new CExpr(IFMARKED, e1, e2, e3);
-#else
               int index = read_index();
               Expr *e1 = read_code();
               Expr *e2 = read_code();
@@ -249,7 +213,6 @@ Expr *read_code()
               }
               Expr::markedCount++;
               // Expr *ret = new CExpr(IFMARKED, e1, e2, e3);
-#endif
               eat_char(')');
               return ret;
             }
@@ -323,9 +286,6 @@ Expr *read_code()
                     pref->insert(0, "ma");
                     break;
                   }
-#ifndef MARKVAR_32
-                  Expr *ret = new CExpr(MARKVAR, read_code());
-#else
                   int index = read_index();
                   CExpr *ret = NULL;
                   if (index >= 1 && index <= 32)
@@ -339,9 +299,6 @@ Expr *read_code()
                               << std::endl;
                   }
                   Expr::markedCount++;
-                  // Expr *ret = new CExpr(MARKVAR,read_code());
-#endif
-
                   eat_char(')');
                   return ret;
                 }
@@ -535,18 +492,22 @@ Expr *read_code()
       }
       // parse application
       if (pref)
-        // we have eaten part of the name of an applied identifier
-        pref->append(prefix_id());
+      {
+        // We have eaten part of the name (or all) of an applied identifier. We
+        // parse the rest of the identifier and append it. Note: we don't want
+        // `prefix_id()` to skip whitespace, otherwise we may accidentially
+        // parse the next identifier (if `pref` already holds the complete
+        // identifier) and add it to the current one.
+        pref->append(prefix_id(false));
+      }
       else
+      {
         pref = new string(prefix_id());
+      }
 
       Expr *ret = progs[*pref];
       if (!ret)
-#ifdef USE_HASH_TABLES
-        ret = symbols[*pref];
-#else
         ret = symbols->get(pref->c_str()).first;
-#endif
 
       if (!ret)
         report_error(string("Undeclared identifier at head of an application: ")
@@ -558,9 +519,6 @@ Expr *read_code()
       while ((c = non_ws()) != ')')
       {
         our_ungetc(c);
-#ifndef USE_FLAT_APP
-        ret = new CExpr(APP, ret, read_code());
-#else
         Expr *ke = read_code();
         Expr *orig_ret = ret;
         ret = Expr::make_app(ret, ke);
@@ -568,7 +526,6 @@ Expr *read_code()
         {
           orig_ret->dec();
         }
-#endif
       }
       return ret;
     }  // end case '('
@@ -619,12 +576,8 @@ Expr *read_code()
     {
       our_ungetc(d);
       string id(prefix_id());
-#ifdef USE_HASH_MAPS
-      Expr *ret = symbols[id];
-#else
       pair<Expr *, Expr *> p = symbols->get(id.c_str());
       Expr *ret = p.first;
-#endif
       if (!ret) ret = progs[id];
       if (!ret) report_error(string("Undeclared identifier: ") + id);
       ret->inc();
@@ -652,11 +605,7 @@ Expr *check_code(Expr *_e)
           break;
         }
         case SYMS_EXPR: {
-#ifdef USE_HASH_MAPS
-          Expr *tp = symbol_types[((SymSExpr *)e)->s];
-#else
           Expr *tp = symbols->get(((SymSExpr *)e)->s.c_str()).second;
-#endif
           if (!tp)
             report_error(
                 string("A symbol is missing a type in a piece of code.")
@@ -668,7 +617,6 @@ Expr *check_code(Expr *_e)
         default: report_error("Unrecognized form of expr in code.");
       }
     case APP: {
-#ifdef USE_FLAT_APP
       Expr *h = e->kids[0]->followDefs();
       vector<Expr *> argtps;
       int counter = 1;
@@ -678,14 +626,6 @@ Expr *check_code(Expr *_e)
         counter++;
       }
       int iend = counter - 1;
-#else
-      vector<Expr *> args;
-      Expr *h = (Expr *)e->collect_args(args);
-
-      int iend = args.size();
-      vector<Expr *> argtps(iend);
-      for (int i = 0; i < iend; i++) argtps[i] = check_code(args[i]);
-#endif
 
       Expr *tp = NULL;
       if (h->getop() == PROG)
@@ -694,11 +634,7 @@ Expr *check_code(Expr *_e)
       }
       else
       {
-#ifdef USE_HASH_MAPS
-        tp = symbol_types[((SymSExpr *)h)->s];
-#else
         tp = symbols->get(((SymSExpr *)h)->s.c_str()).second;
-#endif
       }
 
       if (!tp)
@@ -732,11 +668,7 @@ Expr *check_code(Expr *_e)
               + string(" in application in code.\n")
               + string("1. the application: ") + e->toString()
               + string("\n2. the head's type: ") + tp->toString()
-#ifdef USE_FLAT_APP
               + string("\n3. the argument: ") + e->kids[i + 1]->toString()
-#else
-              + string("\n3. the argument: ") + args[i]->toString()
-#endif
               + string("\n4. computed type: ") + argtps[i]->toString()
               + string("\n5. expected type: ") + cur->kids[1]->toString());
         }
@@ -777,21 +709,12 @@ Expr *check_code(Expr *_e)
 
       Expr *tp1 = check_code(e->kids[1]);
 
-#ifdef USE_HASH_MAPS
-      Expr *prevtp = symbol_types[var->s];
-      symbol_types[var->s] = tp1;
-#else
       pair<Expr *, Expr *> prev =
           symbols->insert(var->s.c_str(), pair<Expr *, Expr *>(NULL, tp1));
-#endif
 
       Expr *tp2 = check_code(e->kids[2]);
 
-#ifdef USE_HASH_MAPS
-      symbol_types[var->s] = prevtp;
-#else
       symbols->insert(var->s.c_str(), prev);
-#endif
 
       return tp2;
     }
@@ -874,11 +797,7 @@ Expr *check_code(Expr *_e)
 
       if (tp->getclass() == SYMS_EXPR && !tp->val)
       {
-#ifdef USE_HASH_MAPS
-        tptp = symbol_types[tp->s];
-#else
         tptp = symbols->get(tp->s.c_str()).second;
-#endif
       }
 
       if (!tptp->isType(statType))
@@ -902,11 +821,7 @@ Expr *check_code(Expr *_e)
 
       if (tp->getclass() == SYMS_EXPR && !tp->val)
       {
-#ifdef USE_HASH_MAPS
-        tptp = symbol_types[tp->s];
-#else
         tptp = symbols->get(tp->s.c_str()).second;
-#endif
       }
 
       if (!tptp->isType(statType))
@@ -972,36 +887,27 @@ Expr *check_code(Expr *_e)
     case IFEQUAL:
     {
       SymSExpr *tp0 = (SymSExpr *)check_code(e->kids[0]);
-      if (tp0->getclass() != SYMS_EXPR || tp0->val)
-      {
-        string errstr0 =
-            (string("\"ifequal\" is used with a first expression which ")
-             + string("cannot be a lambda-bound variable.\n")
-             + string("1. the expression :") + e->kids[0]->toString()
-             + string("\n2. its type: ") + tp0->toString());
-        report_error(errstr0);
-      }
-
       SymSExpr *tp1 = (SymSExpr *)check_code(e->kids[1]);
 
-      if (tp1->getclass() != SYMS_EXPR || tp1->val)
+      if (tp0 != tp1)
       {
-        string errstr1 =
-            (string("\"ifequal\" is used with a second expression which ")
-             + string("cannot be a lambda-bound variable.\n")
-             + string("1. the expression :") + e->kids[1]->toString()
-             + string("\n2. its type: ") + tp1->toString());
-        report_error(errstr1);
+        report_error(
+            string("\"ifequal\" used with compare expressions that do not ")
+            + string("have equal types\n") + string("\n1. first expression: ")
+            + e->kids[0]->toString() + string("\n2. second expression: ")
+            + e->kids[1]->toString() + string("\n3. first expression's type: ")
+            + tp0->toString() + string("\n4. second expression's type: ")
+            + tp1->toString());
       }
 
       SymSExpr *tpc1 = (SymSExpr *)check_code(e->kids[2]);
       SymSExpr *tpc2 = (SymSExpr *)check_code(e->kids[3]);
       if (tpc1->getclass() != SYMS_EXPR || tpc1->val || tpc1 != tpc2)
         report_error(
-            string("\"ifequal\" used with expressions that do not ")
+            string("\"ifequal\" used with return expressions that do not ")
             + string("have equal simple datatypes\nfor their types.\n")
-            + string("\n1. first expression: ") + e->kids[3]->toString()
-            + string("\n2. second expression: ") + e->kids[4]->toString()
+            + string("\n1. first expression: ") + e->kids[2]->toString()
+            + string("\n2. second expression: ") + e->kids[3]->toString()
             + string("\n3. first expression's type: ") + tpc1->toString()
             + string("\n4. second expression's type: ") + tpc2->toString());
       return tpc1;
@@ -1012,11 +918,7 @@ Expr *check_code(Expr *_e)
       Expr *tptp = NULL;
       if (scruttp->getclass() == SYMS_EXPR && !scruttp->val)
       {
-#ifdef USE_HASH_MAPS
-        tptp = symbol_types[scruttp->s];
-#else
         tptp = symbols->get(scruttp->s.c_str()).second;
-#endif
       }
       if (!tptp->isType(statType))
       {
@@ -1049,18 +951,10 @@ Expr *check_code(Expr *_e)
           else
           {
             // extend type context and then check the body of the case
-#ifdef USE_HASH_MAPS
-            vector<Expr *> prevs;
-#else
             vector<pair<Expr *, Expr *> > prevs;
-#endif
             vector<Expr *> vars;
             SymSExpr *ctor = (SymSExpr *)pat->collect_args(vars);
-#ifdef USE_HASH_MAPS
-            CExpr *ctortp = (CExpr *)symbol_types[ctor->s];
-#else
             CExpr *ctortp = (CExpr *)symbols->get(ctor->s.c_str()).second;
-#endif
             CExpr *curtp = ctortp;
             for (int i = 0, iend = vars.size(); i < iend; i++)
             {
@@ -1069,16 +963,10 @@ Expr *check_code(Expr *_e)
                     string("Too many arguments to a constructor in")
                     + string(" a pattern.\n1. the pattern: ") + pat->toString()
                     + string("\n2. the head's type: " + ctortp->toString()));
-#ifdef USE_HASH_MAPS
-              prevs.push_back(symbol_types[((SymSExpr *)vars[i])->s]);
-              symbol_types[((SymSExpr *)vars[i])] =
-                  curtp->followDefs()->kids[1];
-#else
               prevs.push_back(symbols->insert(
                   ((SymSExpr *)vars[i])->s.c_str(),
                   pair<Expr *, Expr *>(
                       NULL, ((CExpr *)(curtp->followDefs()))->kids[1])));
-#endif
               curtp = (CExpr *)((CExpr *)(curtp->followDefs()))->kids[2];
             }
 
@@ -1086,11 +974,7 @@ Expr *check_code(Expr *_e)
 
             for (int i = 0, iend = prevs.size(); i < iend; i++)
             {
-#ifdef USE_HASH_MAPS
-              symbol_types[((SymSExpr *)vars[i])->s] = prevs[i];
-#else
               symbols->insert(((SymSExpr *)vars[i])->s.c_str(), prevs[i]);
-#endif
             }
           }
         }
@@ -1310,13 +1194,8 @@ start_run_code:
         r1->dec();
         return NULL;
       }
-#ifndef MARKVAR_32
-      if (r1->getexmark())
-      {
-#else
       if (((SymExpr *)r1)->getmark(((IntExpr *)e->kids[0])->get_num()))
       {
-#endif
         r1->dec();
         _e = e->kids[2];
         goto start_run_code;
@@ -1381,17 +1260,10 @@ start_run_code:
         r1->dec();
         return NULL;
       }
-#ifndef MARKVAR_32
-      if (r1->getexmark())
-        r1->clearexmark();
-      else
-        r1->setexmark();
-#else
       if (((SymExpr *)r1)->getmark(((IntExpr *)e->kids[0])->get_num()))
         ((SymExpr *)r1)->clearmark(((IntExpr *)e->kids[0])->get_num());
       else
         ((SymExpr *)r1)->setmark(((IntExpr *)e->kids[0])->get_num());
-#endif
       return r1;
     }
     case MATCH:
@@ -1480,20 +1352,11 @@ start_run_code:
         // std::cout << "running " << ((SymSExpr*)e->get_head( false
         // ))->s.c_str() << " with " << (int)args.size() << " arguments" <<
         // std::endl;
-        //#ifndef USE_FLAT_APP
-        //      for( int a=0; a<(int)args.size(); a++ )
-        //      {
-        //        args[a] = CExpr::convert_to_flat_app( args[a] );
-        //      }
-        //#endif
         Expr *ret = run_compiled_scc(e->get_head(false), args);
         for (int i = 0, iend = args.size(); i < iend; i++)
         {
           args[i]->dec();
         }
-        //#ifndef USE_FLAT_APP
-        //      ret = CExpr::convert_to_tree_app( ret );
-        //#endif
         // ret->inc();
         return ret;
       }
