@@ -1,0 +1,12 @@
+(declare comparison type)
+(declare SMALLER comparison)
+(declare EQUAL comparison)
+(declare GREATER comparison)
+
+(program compar ((m mpz) (n mpz)) comparison
+  EQUAL
+)
+
+(program p1 ((x mpz) (y mpz)) comparison
+  (compar x y)
+)
