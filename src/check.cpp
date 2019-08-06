@@ -49,19 +49,19 @@ void report_error(const string &msg)
   if (filename)
   {
     Position p(filename, linenum, colnum);
-    p.print(cout);
+    p.print(cerr);
   }
-  cout << "\n";
-  cout << msg;
-  cout << "\n";
+  cerr << "\n";
+  cerr << msg;
+  cerr << "\n";
   if (not_defeq1 && not_defeq2)
   {
-    cout << "The following terms are not definitionally equal:\n1. ";
-    not_defeq1->print(cout);
-    cout << "\n2. ";
-    not_defeq2->print(cout);
+    cerr << "The following terms are not definitionally equal:\n1. ";
+    not_defeq1->print(cerr);
+    cerr << "\n2. ";
+    not_defeq2->print(cerr);
   }
-  cout.flush();
+  cerr.flush();
   exit(1);
 }
 
@@ -932,12 +932,13 @@ void check_file(const char *_filename, args a, sccwriter *scw, libwriter *lw)
 {
   std::ifstream fs;
   fs.open(_filename, std::fstream::in);
-  if (!fs.is_open())
+  std::string filenameString(_filename);
+  if (!fs.is_open() && filenameString != "stdin")
   {
     report_error(string("Could not open file \"") + _filename
                  + string("\" for reading.\n"));
   }
-  check_file(fs, std::string(_filename), a, scw, lw);
+  check_file(fs, filenameString, a, scw, lw);
   fs.close();
 }
 
