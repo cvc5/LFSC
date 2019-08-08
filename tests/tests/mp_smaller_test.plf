@@ -1,0 +1,25 @@
+(declare bool type)
+(declare tt bool)
+(declare ff bool)
+
+(define num mpz)
+
+(program mp_smaller ((m mpz) (n mpz)) bool
+  (mp_ifneg (mp_add m (mp_neg n)) tt ff)
+)  
+
+(program smaller ((m num) (n num)) bool
+  (mp_smaller m n)
+)
+
+(declare checked_smaller
+  (! x mpz (! y mpz type)))
+
+(declare check_smaller
+  (! x mpz
+  (! y mpz
+  (! u (^ (smaller x y) tt)
+    (checked_smaller x y))))))
+
+(check
+  (: (checked_smaller 5 6) (check_smaller 5 6)))

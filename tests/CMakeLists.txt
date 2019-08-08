@@ -2,7 +2,10 @@ set(lfsc_test_file_list
   bool.plf
   eq_mpz.plf
   issue20.plf
+  issue8-mpexp.plf
   mp_prefix.plf
+  mp_smaller_test.plf
+  num.plf
   sat.plf
   semicolon_after_id.plf
   smt.plf
