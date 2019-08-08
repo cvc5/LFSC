@@ -659,7 +659,7 @@ Expr *check_code(Expr *_e)
               + string("\n2. its (functional) type: ") + cur->toString());
         if (argtps[i]->getop() == APP)
           argtps[i] = ((CExpr *)argtps[i])->kids[0];
-        if (argtps[i] != cur->kids[1])
+        if (!argtps[i]->defeq(cur->kids[1]))
         {
           char buf[1024];
           sprintf(buf, "%d", i);
@@ -725,7 +725,8 @@ Expr *check_code(Expr *_e)
     {
       Expr *tp0 = check_code(e->kids[0]);
       Expr *tp1 = check_code(e->kids[1]);
-
+      tp0 = tp0->followDefs();
+      tp1 = tp1->followDefs();
       if (tp0 != statMpz && tp0 != statMpq)
         report_error(string("Argument to mp_[arith] does not have type \"mpz\" "
                             "or \"mpq\".\n")
@@ -745,6 +746,7 @@ Expr *check_code(Expr *_e)
     case NEG:
     {
       Expr *tp0 = check_code(e->kids[0]);
+      tp0 = tp0->followDefs();
       if (tp0 != statMpz && tp0 != statMpq)
         report_error(
             string(
@@ -759,6 +761,7 @@ Expr *check_code(Expr *_e)
     case IFZERO:
     {
       Expr *tp0 = check_code(e->kids[0]);
+      tp0 = tp0->followDefs();
       if (tp0 != statMpz && tp0 != statMpq)
         report_error(
             string("Argument to mp_if does not have type \"mpz\" or \"mpq\".\n")
@@ -968,6 +971,14 @@ Expr *check_code(Expr *_e)
                   pair<Expr *, Expr *>(
                       NULL, ((CExpr *)(curtp->followDefs()))->kids[1])));
               curtp = (CExpr *)((CExpr *)(curtp->followDefs()))->kids[2];
+            }
+            // if we have not consumed enough pattern arguments
+            if (curtp->followDefs()->getop() == PI)
+            {
+              report_error(
+                  string("Too few arguments to a constructor in")
+                  + string(" a pattern.\n1. the pattern: ") + pat->toString()
+                  + string("\n2. the head's type: " + ctortp->toString()));
             }
 
             tp = check_code(c->kids[1]);
