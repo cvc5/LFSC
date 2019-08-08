@@ -1,0 +1,9 @@
+(define num mpz)
+
+(program p1 ((e1 num)) num
+  1
+)
+
+(program p2 ((e1 num) (e2 num)) num
+  (mp_add e1 e2)
+)

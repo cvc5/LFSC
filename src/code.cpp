@@ -49,14 +49,9 @@ SymSExpr *read_ctor()
     return nullptr;
   }
 
-#ifdef USE_HASH_TABLES
-  Expr *s = symbols[id];
-  Expr *stp = symbol_types[id];
-#else
   pair<Expr *, Expr *> p = symbols->get(id.c_str());
   Expr *s = p.first;
   Expr *stp = p.second;
-#endif
 
   if (!stp) report_error("Undeclared identifier parsing a pattern.");
 
@@ -74,11 +69,7 @@ Expr *read_case()
   Expr *pat = NULL;
   vector<SymSExpr *> vars;
 
-#ifdef USE_HASH_MAPS
-  vector<Expr *> prevs;
-#else
   vector<pair<Expr *, Expr *> > prevs;
-#endif
   char d = non_ws();
   switch (d)
   {
@@ -103,13 +94,8 @@ Expr *read_case()
         }
         SymSExpr *var = new SymSExpr(varstr);
         vars.push_back(var);
-#ifdef USE_HASH_MAPS
-        prevs.push_back(symbols[varstr]);
-        symbols[varstr] = var;
-#else
         prevs.push_back(
             symbols->insert(varstr.c_str(), pair<Expr *, Expr *>(var, NULL)));
-#endif
         Expr *orig_pat = pat;
         pat = Expr::make_app(pat, var);
         if (orig_pat->getclass() == CEXPR)
@@ -133,11 +119,7 @@ Expr *read_case()
   for (int i = 0, iend = prevs.size(); i < iend; i++)
   {
     string &s = vars[i]->s;
-#ifdef USE_HASH_MAPS
-    symbols[s] = prevs[i];
-#else
     symbols->insert(s.c_str(), prevs[i]);
-#endif
   }
 
   eat_char(')');
@@ -197,21 +179,13 @@ Expr *read_code()
 
           Expr *t1 = read_code();
 
-#ifdef USE_HASH_MAPS
-          Expr *prev = symbols[id];
-          symbols[id] = var;
-#else
           pair<Expr *, Expr *> prev =
               symbols->insert(id.c_str(), pair<Expr *, Expr *>(var, NULL));
-#endif
 
           Expr *t2 = read_code();
 
-#ifdef USE_HASH_MAPS
-          symbols[id] = prev;
-#else
           symbols->insert(id.c_str(), prev);
-#endif
+
           eat_char(')');
           return new CExpr(LET, var, t1, t2);
         }
@@ -527,18 +501,22 @@ Expr *read_code()
       }
       // parse application
       if (pref)
-        // we have eaten part of the name of an applied identifier
-        pref->append(prefix_id());
+      {
+        // We have eaten part of the name (or all) of an applied identifier. We
+        // parse the rest of the identifier and append it. Note: we don't want
+        // `prefix_id()` to skip whitespace, otherwise we may accidentially
+        // parse the next identifier (if `pref` already holds the complete
+        // identifier) and add it to the current one.
+        pref->append(prefix_id(false));
+      }
       else
+      {
         pref = new string(prefix_id());
+      }
 
       Expr *ret = progs[*pref];
       if (!ret)
-#ifdef USE_HASH_TABLES
-        ret = symbols[*pref];
-#else
         ret = symbols->get(pref->c_str()).first;
-#endif
 
       if (!ret)
         report_error(string("Undeclared identifier at head of an application: ")
@@ -607,12 +585,8 @@ Expr *read_code()
     {
       our_ungetc(d);
       string id(prefix_id());
-#ifdef USE_HASH_MAPS
-      Expr *ret = symbols[id];
-#else
       pair<Expr *, Expr *> p = symbols->get(id.c_str());
       Expr *ret = p.first;
-#endif
       if (!ret) ret = progs[id];
       if (!ret) report_error(string("Undeclared identifier: ") + id);
       ret->inc();
@@ -640,11 +614,7 @@ Expr *check_code(Expr *_e)
           break;
         }
         case SYMS_EXPR: {
-#ifdef USE_HASH_MAPS
-          Expr *tp = symbol_types[((SymSExpr *)e)->s];
-#else
           Expr *tp = symbols->get(((SymSExpr *)e)->s.c_str()).second;
-#endif
           if (!tp)
             report_error(
                 string("A symbol is missing a type in a piece of code.")
@@ -673,11 +643,7 @@ Expr *check_code(Expr *_e)
       }
       else
       {
-#ifdef USE_HASH_MAPS
-        tp = symbol_types[((SymSExpr *)h)->s];
-#else
         tp = symbols->get(((SymSExpr *)h)->s.c_str()).second;
-#endif
       }
 
       if (!tp)
@@ -702,7 +668,7 @@ Expr *check_code(Expr *_e)
               + string("\n2. its (functional) type: ") + cur->toString());
         if (argtps[i]->getop() == APP)
           argtps[i] = ((CExpr *)argtps[i])->kids[0];
-        if (argtps[i] != cur->kids[1])
+        if (!argtps[i]->defeq(cur->kids[1]))
         {
           char buf[1024];
           sprintf(buf, "%d", i);
@@ -752,21 +718,12 @@ Expr *check_code(Expr *_e)
 
       Expr *tp1 = check_code(e->kids[1]);
 
-#ifdef USE_HASH_MAPS
-      Expr *prevtp = symbol_types[var->s];
-      symbol_types[var->s] = tp1;
-#else
       pair<Expr *, Expr *> prev =
           symbols->insert(var->s.c_str(), pair<Expr *, Expr *>(NULL, tp1));
-#endif
 
       Expr *tp2 = check_code(e->kids[2]);
 
-#ifdef USE_HASH_MAPS
-      symbol_types[var->s] = prevtp;
-#else
       symbols->insert(var->s.c_str(), prev);
-#endif
 
       return tp2;
     }
@@ -777,7 +734,8 @@ Expr *check_code(Expr *_e)
     {
       Expr *tp0 = check_code(e->kids[0]);
       Expr *tp1 = check_code(e->kids[1]);
-
+      tp0 = tp0->followDefs();
+      tp1 = tp1->followDefs();
       if (tp0 != statMpz && tp0 != statMpq)
         report_error(string("Argument to mp_[arith] does not have type \"mpz\" "
                             "or \"mpq\".\n")
@@ -797,6 +755,7 @@ Expr *check_code(Expr *_e)
     case NEG:
     {
       Expr *tp0 = check_code(e->kids[0]);
+      tp0 = tp0->followDefs();
       if (tp0 != statMpz && tp0 != statMpq)
         report_error(
             string(
@@ -811,6 +770,7 @@ Expr *check_code(Expr *_e)
     case IFZERO:
     {
       Expr *tp0 = check_code(e->kids[0]);
+      tp0 = tp0->followDefs();
       if (tp0 != statMpz && tp0 != statMpq)
         report_error(
             string("Argument to mp_if does not have type \"mpz\" or \"mpq\".\n")
@@ -849,11 +809,7 @@ Expr *check_code(Expr *_e)
 
       if (tp->getclass() == SYMS_EXPR && !tp->val)
       {
-#ifdef USE_HASH_MAPS
-        tptp = symbol_types[tp->s];
-#else
         tptp = symbols->get(tp->s.c_str()).second;
-#endif
       }
 
       if (!tptp->isType(statType))
@@ -877,11 +833,7 @@ Expr *check_code(Expr *_e)
 
       if (tp->getclass() == SYMS_EXPR && !tp->val)
       {
-#ifdef USE_HASH_MAPS
-        tptp = symbol_types[tp->s];
-#else
         tptp = symbols->get(tp->s.c_str()).second;
-#endif
       }
 
       if (!tptp->isType(statType))
@@ -978,11 +930,7 @@ Expr *check_code(Expr *_e)
       Expr *tptp = NULL;
       if (scruttp->getclass() == SYMS_EXPR && !scruttp->val)
       {
-#ifdef USE_HASH_MAPS
-        tptp = symbol_types[scruttp->s];
-#else
         tptp = symbols->get(scruttp->s.c_str()).second;
-#endif
       }
       if (!tptp->isType(statType))
       {
@@ -1015,18 +963,10 @@ Expr *check_code(Expr *_e)
           else
           {
             // extend type context and then check the body of the case
-#ifdef USE_HASH_MAPS
-            vector<Expr *> prevs;
-#else
             vector<pair<Expr *, Expr *> > prevs;
-#endif
             vector<Expr *> vars;
             SymSExpr *ctor = (SymSExpr *)pat->collect_args(vars);
-#ifdef USE_HASH_MAPS
-            CExpr *ctortp = (CExpr *)symbol_types[ctor->s];
-#else
             CExpr *ctortp = (CExpr *)symbols->get(ctor->s.c_str()).second;
-#endif
             CExpr *curtp = ctortp;
             for (int i = 0, iend = vars.size(); i < iend; i++)
             {
@@ -1035,28 +975,26 @@ Expr *check_code(Expr *_e)
                     string("Too many arguments to a constructor in")
                     + string(" a pattern.\n1. the pattern: ") + pat->toString()
                     + string("\n2. the head's type: " + ctortp->toString()));
-#ifdef USE_HASH_MAPS
-              prevs.push_back(symbol_types[((SymSExpr *)vars[i])->s]);
-              symbol_types[((SymSExpr *)vars[i])] =
-                  curtp->followDefs()->kids[1];
-#else
               prevs.push_back(symbols->insert(
                   ((SymSExpr *)vars[i])->s.c_str(),
                   pair<Expr *, Expr *>(
                       NULL, ((CExpr *)(curtp->followDefs()))->kids[1])));
-#endif
               curtp = (CExpr *)((CExpr *)(curtp->followDefs()))->kids[2];
+            }
+            // if we have not consumed enough pattern arguments
+            if (curtp->followDefs()->getop() == PI)
+            {
+              report_error(
+                  string("Too few arguments to a constructor in")
+                  + string(" a pattern.\n1. the pattern: ") + pat->toString()
+                  + string("\n2. the head's type: " + ctortp->toString()));
             }
 
             tp = check_code(c->kids[1]);
 
             for (int i = 0, iend = prevs.size(); i < iend; i++)
             {
-#ifdef USE_HASH_MAPS
-              symbol_types[((SymSExpr *)vars[i])->s] = prevs[i];
-#else
               symbols->insert(((SymSExpr *)vars[i])->s.c_str(), prevs[i]);
-#endif
             }
           }
         }

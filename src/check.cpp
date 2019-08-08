@@ -28,17 +28,10 @@ int colnum = 1;
 const char *filename = 0;
 std::istream* curfile = 0;
 
-//#define USE_HASH_MAPS  //AJR: deprecated
-
 symmap2 progs;
 std::vector<Expr *> ascHoles;
 
-#ifdef USE_HASH_MAPS
-hash_map<string, Expr *> symbols;
-hash_map<string, Expr *> symbol_types;
-#else
 Trie<pair<Expr *, Expr *> > *symbols = new Trie<pair<Expr *, Expr *> >;
-#endif
 
 hash_map<string, bool> imports;
 std::map<SymExpr *, int> mark_map;
@@ -56,19 +49,19 @@ void report_error(const string &msg)
   if (filename)
   {
     Position p(filename, linenum, colnum);
-    p.print(cout);
+    p.print(cerr);
   }
-  cout << "\n";
-  cout << msg;
-  cout << "\n";
+  cerr << "\n";
+  cerr << msg;
+  cerr << "\n";
   if (not_defeq1 && not_defeq2)
   {
-    cout << "The following terms are not definitionally equal:\n1. ";
-    not_defeq1->print(cout);
-    cout << "\n2. ";
-    not_defeq2->print(cout);
+    cerr << "The following terms are not definitionally equal:\n1. ";
+    not_defeq1->print(cerr);
+    cerr << "\n2. ";
+    not_defeq2->print(cerr);
   }
-  cout.flush();
+  cerr.flush();
   exit(1);
 }
 
@@ -183,26 +176,14 @@ start_check:
           Expr *domain = check(true, statType);
           eat_excess(prevo);
           allow_run = false;
-#ifdef USE_HASH_MAPS
-          Expr *prev = symbols[id];
-          Expr *prevtp = symbol_types[id];
-          symbols[id] = sym;
-          symbol_types[id] = domain;
-#else
           pair<Expr *, Expr *> prev =
               symbols->insert(id.c_str(), pair<Expr *, Expr *>(sym, domain));
-#endif
           if (expected) expected->inc();
           Expr *range = check(create, expected, computed, NULL, return_pos);
           eat_excess(prevo);
           eat_rparen();
 
-#ifdef USE_HASH_MAPS
-          symbols[id] = prev;
-          symbol_types[id] = prevtp;
-#else
           symbols->insert(id.c_str(), prev);
-#endif
           if (expected)
           {
             int o = expected->followDefs()->getop();
@@ -256,17 +237,10 @@ start_check:
           Expr *expected_domain = check(true, statType);
           eat_excess(prevo);
 
-#ifdef USE_HASH_MAPS
-          Expr *prev = symbols[id];
-          Expr *prevtp = symbol_types[id];
-          symbols[id] = sym;
-          symbol_types[id] = expected_domain;
-#else
           pair<Expr *, Expr *> prevpr = symbols->insert(
               id.c_str(), pair<Expr *, Expr *>(sym, expected_domain));
           Expr *prev = prevpr.first;
           Expr *prevtp = prevpr.second;
-#endif
           expected_domain
               ->inc();  // because we have stored it in the symbol table
 
@@ -326,17 +300,11 @@ start_check:
                y, so that we can set the hole to be \ y t, where t contains ys
                but not xs. */
 
-#ifdef USE_HASH_MAPS
-          Expr *prev = symbols[id];
-          Expr *prevtp = symbol_types[id];
-          symbols[id] = sym;
-          symbol_types[id] = expected_domain;
-#else
           pair<Expr *, Expr *> prevpr = symbols->insert(
               id.c_str(), pair<Expr *, Expr *>(sym, expected_domain));
           Expr *prev = prevpr.first;
           Expr *prevtp = prevpr.second;
-#endif
+
           Expr *prev_pivar_val = pivar->val;
           sym->inc();
           pivar->val = sym;
@@ -368,12 +336,8 @@ start_check:
             eat_excess(prev);
             eat_rparen();
 
-#ifdef USE_HASH_MAPS
-            symbols[id] = prev;
-            symbol_types[id] = prevtp;
-#else
             symbols->insert(id.c_str(), prevpr);
-#endif
+
             expected_domain
                 ->dec();  // because removed from the symbol table now
 
@@ -506,17 +470,10 @@ start_check:
 
           sym->val = trm;
 
-#ifdef USE_HASH_MAPS
-          Expr *prev = symbols[id];
-          Expr *prevtp = symbol_types[id];
-          symbols[id] = sym;
-          symbol_types[id] = tp_of_trm;
-#else
           pair<Expr *, Expr *> prevpr =
               symbols->insert(id.c_str(), pair<Expr *, Expr *>(sym, tp_of_trm));
           Expr *prev = prevpr.first;
           Expr *prevtp = prevpr.second;
-#endif
 
           if (tail_calls && big_check && return_pos && !create)
           {
@@ -532,12 +489,8 @@ start_check:
             eat_excess(prev_open);
             eat_rparen();
 
-#ifdef USE_HASH_MAPS
-            symbols[id] = prev;
-            symbol_types[id] = prevtp;
-#else
             symbols->insert(id.c_str(), prevpr);
-#endif
+
             tp_of_trm->dec();  // because removed from the symbol table now
 
             sym->dec();
@@ -931,14 +884,9 @@ start_check:
     {
       our_ungetc(d);
       string id(prefix_id());
-#ifdef USE_HASH_MAPS
-      Expr *ret = symbols[id];
-      Expr *rettp = symbol_types[id];
-#else
       pair<Expr *, Expr *> p = symbols->get(id.c_str());
       Expr *ret = p.first;
       Expr *rettp = p.second;
-#endif
       if (!ret) report_error(string("Undeclared identifier: ") + id);
       if (expected)
       {
@@ -978,28 +926,19 @@ start_check:
   return 0;
 }
 
-#ifdef USE_HASH_MAPS
-void discard_old_symbol(const string &id)
-{
-  Expr *tmp = symbols[id];
-  if (tmp) tmp->dec();
-  tmp = symbol_types[id];
-  if (tmp) tmp->dec();
-}
-#endif
-
 int check_time;
 
 void check_file(const char *_filename, args a, sccwriter *scw, libwriter *lw)
 {
   std::ifstream fs;
   fs.open(_filename, std::fstream::in);
-  if (!fs.is_open())
+  std::string filenameString(_filename);
+  if (!fs.is_open() && filenameString != "stdin")
   {
     report_error(string("Could not open file \"") + _filename
                  + string("\" for reading.\n"));
   }
-  check_file(fs, std::string(_filename), a, scw, lw);
+  check_file(fs, filenameString, a, scw, lw);
   fs.close();
 }
 
@@ -1093,16 +1032,10 @@ void check_file(std::istream& in,
                     string("Kind-level definitions are not supported.\n"));
               SymSExpr *s = new SymSExpr(id);
               s->val = t;
-#ifdef USE_HASH_MAPS
-              discard_old_symbol(id);
-              symbols[id] = s;
-              symbol_types[id] = ttp;
-#else
               pair<Expr *, Expr *> prev =
                   symbols->insert(id.c_str(), pair<Expr *, Expr *>(s, ttp));
               if (prev.first) prev.first->dec();
               if (prev.second) prev.second->dec();
-#endif
               break;
             }
             case 'c':
@@ -1127,17 +1060,11 @@ void check_file(std::istream& in,
                     + string("or \"kind\"): ") + ttp->toString());
               ttp->dec();
               SymSExpr *s = new SymSExpr(id);
-#ifdef USE_HASH_MAPS
-              discard_old_symbol(id);
-              symbols[id] = s;
-              symbol_types[id] = t;
-#else
               pair<Expr *, Expr *> prev =
                   symbols->insert(id.c_str(), pair<Expr *, Expr *>(s, t));
               if (lw) lw->add_symbol(s, t);
               if (prev.first) prev.first->dec();
               if (prev.second) prev.second->dec();
-#endif
               break;
             }
             default: report_error(string("Unexpected start of command."));
@@ -1173,11 +1100,8 @@ void check_file(std::istream& in,
           // clean up local symbols
           for (int a = 0; a < (int)local_sym_names.size(); a++)
           {
-#ifdef USE_HASH_MAPS
-#else
             symbols->insert(local_sym_names[a].first.c_str(),
                             local_sym_names[a].second);
-#endif
           }
           local_sym_names.clear();
           mark_map.clear();
@@ -1205,16 +1129,10 @@ void check_file(std::istream& in,
           if (o == KIND)
             report_error(string("Kind-level definitions are not supported.\n"));
           SymSExpr *s = new SymSExpr(id);
-#ifdef USE_HASH_MAPS
-          discard_old_symbol(id);
-          symbols[id] = s;
-          symbol_types[id] = ttp;
-#else
           pair<Expr *, Expr *> prev =
               symbols->insert(id.c_str(), pair<Expr *, Expr *>(s, ttp));
           if (prev.first) prev.first->dec();
           if (prev.second) prev.second->dec();
-#endif
           break;
         }
         case 'r':
@@ -1260,14 +1178,12 @@ void check_file(std::istream& in,
             our_ungetc(d);
             eat_char('(');
             string varstr = prefix_id();
-#ifdef USE_HASH_MAPS
-            if (symbols.find(varstr) != symbols.end())
-#else
             if (symbols->get(varstr.c_str()).first != NULL)
-#endif
+            {
               report_error(string("A program variable is already declared")
                            + string(" (as a constant).\n1. The variable: ")
                            + varstr);
+            }
             Expr *var = new SymSExpr(varstr);
             vars.push_back(var);
             statType->inc();
@@ -1275,13 +1191,9 @@ void check_file(std::istream& in,
             Expr *tp = check(true, NULL, &tmp, 0, true);
             if (tp->getclass() == SYMS_EXPR)
             {
-#ifdef USE_HASH_MAPS
-              Expr *tptp = symbol_types[((SymSExpr *)tp)->s];
-#else
               pair<Expr *, Expr *> p =
                   symbols->get(((SymSExpr *)tp)->s.c_str());
               Expr *tptp = p.second;
-#endif
               if (!tptp->isType(statType))
               {
                 report_error(string("Bad argument for side condition"));
@@ -1301,12 +1213,7 @@ void check_file(std::istream& in,
             tps.push_back(tp);
             eat_char(')');
 
-#ifdef USE_HASH_MAPS
-            symbols[varstr] = var;
-            symbol_types[varstr] = tp;
-#else
             symbols->insert(varstr.c_str(), pair<Expr *, Expr *>(var, tp));
-#endif
           }
 
           if (!vars.size()) report_error("A program lacks input variables.");
@@ -1365,12 +1272,7 @@ void check_file(std::istream& in,
           {
             string &s = ((SymSExpr *)vars[i])->s;
 
-#ifdef USE_HASH_MAPS
-            symbols[s] = NULL;
-            symbol_types[s] = NULL;
-#else
             symbols->insert(s.c_str(), pair<Expr *, Expr *>(NULL, NULL));
-#endif
           }
 
           progtp->inc();
@@ -1442,35 +1344,6 @@ Trie<pair<Expr *, Expr *> >::Cleaner *Trie<pair<Expr *, Expr *> >::cleaner =
 void cleanup()
 {
   symmap::iterator i, iend;
-#ifdef USE_HASH_MAPS
-  Expr *tmp;
-  for (i = symbols.begin(), iend = symbols.end(); i != iend; i++)
-  {
-    tmp = i->second;
-    if (tmp)
-    {
-#ifdef DEBUG
-      cout << "Cleaning up " << i->first << " : ";
-      tmp->debug();
-#endif
-      tmp->dec();
-    }
-  }
-  for (i = symbol_types.begin(), iend = symbol_types.end(); i != iend; i++)
-  {
-    tmp = i->second;
-    if (tmp)
-    {
-#ifdef DEBUG
-      cout << "Cleaning up " << i->first << " : ";
-      tmp->debug();
-#endif
-      tmp->dec();
-    }
-  }
-#else
-  delete symbols;
-#endif
 
   // clean up programs
 
@@ -1490,19 +1363,8 @@ void cleanup()
 
 void init()
 {
-#ifdef USE_HASH_MAPS
-  string tp("type");
-  symbols[tp] = statType;
-  symbol_types[tp] = statKind;
-  string mpz("mpz");
-  symbols[mpz] = statMpz;
-  symbol_types[mpz] = statType;
-  statType->inc();
-  sym
-#else
   symbols->insert("type", pair<Expr *, Expr *>(statType, statKind));
   statType->inc();
   symbols->insert("mpz", pair<Expr *, Expr *>(statMpz, statType));
   symbols->insert("mpq", pair<Expr *, Expr *>(statMpq, statType));
-#endif
 }
