@@ -1,0 +1,2 @@
+; we allow extended characters in comments but not in identifiers
+; (declare holds (! c😤 clause type))

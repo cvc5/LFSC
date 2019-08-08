@@ -139,11 +139,15 @@ inline const char *prefix_id(bool skip_ws = true)
 {
   int i = 0;
   char c = idbuf[i++] = skip_ws ? non_ws() : our_getc();
-  while (!isspace(c) && c != '(' && c != ')' && c != ';' && c != char(EOF))
+  while (!isspace(c) && static_cast<unsigned>(c) < 256 && c != '(' && c != ')'
+         && c != ';' && c != char(EOF))
   {
     if (i == IDBUF_LEN) report_error("Identifier is too long");
-
     idbuf[i++] = c = our_getc();
+  }
+  if (static_cast<unsigned>(c) >= 256)
+  {
+    report_error("Extended characters are not allowed identifiers.");
   }
   our_ungetc(c);
   idbuf[i - 1] = 0;

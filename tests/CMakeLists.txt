@@ -1,4 +1,5 @@
 set(lfsc_test_file_list
+  bad-char.plf
   bool.plf
   eq_mpz.plf
   issue20.plf
