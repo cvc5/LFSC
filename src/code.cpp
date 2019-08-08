@@ -972,6 +972,14 @@ Expr *check_code(Expr *_e)
                       NULL, ((CExpr *)(curtp->followDefs()))->kids[1])));
               curtp = (CExpr *)((CExpr *)(curtp->followDefs()))->kids[2];
             }
+            // if we have not consumed enough pattern arguments
+            if (curtp->followDefs()->getop() == PI)
+            {
+              report_error(
+                  string("Too few arguments to a constructor in")
+                  + string(" a pattern.\n1. the pattern: ") + pat->toString()
+                  + string("\n2. the head's type: " + ctortp->toString()));
+            }
 
             tp = check_code(c->kids[1]);
 
