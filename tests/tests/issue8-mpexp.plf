@@ -1,0 +1,9 @@
+(program f' ((i mpz)) mpz
+         (mp_mul i 3))
+
+(define myint mpz)
+
+(program g ((i myint)) mpz i) ; Works
+
+(program f ((i myint)) myint
+         (mp_mul i 3)) ; "Expected type 'mpz', got type 'mpz'" !?!?
