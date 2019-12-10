@@ -6,6 +6,8 @@ set(lfsc_test_file_list
   issue8-mpexp.plf
   mp_prefix.plf
   mp_smaller_test.plf
+  mpz_to_mpq.plf
+  mpz_to_mpq_checks.plf
   num.plf
   sat.plf
   semicolon_after_id.plf

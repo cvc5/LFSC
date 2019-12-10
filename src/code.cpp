@@ -320,131 +320,149 @@ Expr *read_code()
             }
             case 'p':
             {
-              our_ungetc('p');
-              pref = eat_str("p_", false);
-              if (pref)
-              {
-                pref->insert(0, "m");
-                break;
-              }
-              char c = our_getc();
-              switch (c)
-              {
-                case 'a':
+              char cc = our_getc();
+              switch (cc) {
+                case '_':
                 {
-                  our_ungetc('a');
-                  pref = eat_str("add");
-                  if (pref)
-                  {
-                    pref->insert(0, "mp_");
-                    break;
-                  }
-                  Expr *e1 = read_code();
-                  Expr *e2 = read_code();
-                  Expr *ret = new CExpr(ADD, e1, e2);
-                  eat_char(')');
-                  return ret;
-                }
-                case 'n':
-                {
-                  our_ungetc('n');
-                  pref = eat_str("neg");
-                  if (pref)
-                  {
-                    pref->insert(0, "mp_");
-                    break;
-                  }
-
-                  Expr *ret = new CExpr(NEG, read_code());
-                  eat_char(')');
-                  return ret;
-                }
-                case 'i':
-                {  // mpz_if_neg
                   char c = our_getc();
-                  if (c == 'f')
+                  switch (c)
                   {
-                    c = our_getc();
-                    switch (c)
+                    case 'a':
                     {
-                      case 'n':
+                      our_ungetc('a');
+                      pref = eat_str("add");
+                      if (pref)
                       {
-                        our_ungetc('n');
-                        pref = eat_str("neg");
-                        if (pref)
-                        {
-                          pref->insert(0, "mp_if");
-                          break;
-                        }
-                        Expr *e1 = read_code();
-                        Expr *e2 = read_code();
-                        Expr *e3 = read_code();
-                        Expr *ret = new CExpr(IFNEG, e1, e2, e3);
-                        eat_char(')');
-                        return ret;
-                      }
-                      case 'z':
-                      {
-                        our_ungetc('z');
-                        pref = eat_str("zero");
-                        if (pref)
-                        {
-                          pref->insert(0, "mp_if");
-                          break;
-                        }
-                        Expr *e1 = read_code();
-                        Expr *e2 = read_code();
-                        Expr *e3 = read_code();
-                        Expr *ret = new CExpr(IFZERO, e1, e2, e3);
-                        eat_char(')');
-                        return ret;
-                      }
-                      default:
-                        our_ungetc(c);
-                        pref = new string("mp_if");
+                        pref->insert(0, "mp_");
                         break;
+                      }
+                      Expr *e1 = read_code();
+                      Expr *e2 = read_code();
+                      Expr *ret = new CExpr(ADD, e1, e2);
+                      eat_char(')');
+                      return ret;
                     }
+                    case 'n':
+                    {
+                      our_ungetc('n');
+                      pref = eat_str("neg");
+                      if (pref)
+                      {
+                        pref->insert(0, "mp_");
+                        break;
+                      }
+
+                      Expr *ret = new CExpr(NEG, read_code());
+                      eat_char(')');
+                      return ret;
+                    }
+                    case 'i':
+                    {  // mpz_if_neg
+                      char c = our_getc();
+                      if (c == 'f')
+                      {
+                        c = our_getc();
+                        switch (c)
+                        {
+                          case 'n':
+                          {
+                            our_ungetc('n');
+                            pref = eat_str("neg");
+                            if (pref)
+                            {
+                              pref->insert(0, "mp_if");
+                              break;
+                            }
+                            Expr *e1 = read_code();
+                            Expr *e2 = read_code();
+                            Expr *e3 = read_code();
+                            Expr *ret = new CExpr(IFNEG, e1, e2, e3);
+                            eat_char(')');
+                            return ret;
+                          }
+                          case 'z':
+                          {
+                            our_ungetc('z');
+                            pref = eat_str("zero");
+                            if (pref)
+                            {
+                              pref->insert(0, "mp_if");
+                              break;
+                            }
+                            Expr *e1 = read_code();
+                            Expr *e2 = read_code();
+                            Expr *e3 = read_code();
+                            Expr *ret = new CExpr(IFZERO, e1, e2, e3);
+                            eat_char(')');
+                            return ret;
+                          }
+                          default:
+                            our_ungetc(c);
+                            pref = new string("mp_if");
+                            break;
+                        }
+                      }
+                      else
+                      {
+                        our_ungetc(c);
+                        pref = new string("mp_i");
+                        break;
+                      }
+                    }
+                    case 'm':
+                    {
+                      our_ungetc('m');
+                      pref = eat_str("mul");
+                      if (pref)
+                      {
+                        pref->insert(0, "mp_");
+                        break;
+                      }
+                      Expr *e1 = read_code();
+                      Expr *e2 = read_code();
+                      Expr *ret = new CExpr(MUL, e1, e2);
+                      eat_char(')');
+                      return ret;
+                    }
+                    case 'd':
+                    {
+                      our_ungetc('d');
+                      pref = eat_str("div");
+                      if (pref)
+                      {
+                        pref->insert(0, "mp_");
+                        break;
+                      }
+                      Expr *e1 = read_code();
+                      Expr *e2 = read_code();
+                      Expr *ret = new CExpr(DIV, e1, e2);
+                      eat_char(')');
+                      return ret;
+                    }
+                    default:
+                      our_ungetc(c);
+                      pref = new string("mp_");
+                      break;
                   }
-                  else
-                  {
-                    our_ungetc(c);
-                    pref = new string("mp_i");
-                    break;
-                  }
+                  break;
                 }
-                case 'm':
+                case 'z':
                 {
-                  our_ungetc('m');
-                  pref = eat_str("mul");
+                  our_ungetc('z');
+                  pref = eat_str("z_to_mpq", true);
                   if (pref)
                   {
-                    pref->insert(0, "mp_");
+                    pref->insert(0, "mp");
                     break;
                   }
-                  Expr *e1 = read_code();
-                  Expr *e2 = read_code();
-                  Expr *ret = new CExpr(MUL, e1, e2);
-                  eat_char(')');
-                  return ret;
-                }
-                case 'd':
-                {
-                  our_ungetc('d');
-                  pref = eat_str("div");
-                  if (pref)
-                  {
-                    pref->insert(0, "mp_");
-                    break;
-                  }
-                  Expr *e1 = read_code();
-                  Expr *e2 = read_code();
-                  Expr *ret = new CExpr(DIV, e1, e2);
+                  Expr* e = read_code();
+                  Expr* ret = new CExpr(RAT_CAST, e);
                   eat_char(')');
                   return ret;
                 }
                 default:
-                  our_ungetc(c);
-                  pref = new string("mp_");
+                  our_ungetc(cc);
+                  pref = new string("mp");
                   break;
               }
               break;
@@ -764,6 +782,20 @@ Expr *check_code(Expr *_e)
             + string("\n1. its type: ") + tp0->toString());
 
       return tp0;
+    }
+
+    case RAT_CAST:
+    {
+      Expr *tp0 = check_code(e->kids[0]);
+      tp0 = tp0->followDefs();
+      if (tp0 != statMpz)
+        report_error(
+            string(
+                "Argument to mpz_to_mpq does not have type \"mpz\".\n")
+            + string("1. the argument: ") + e->kids[0]->toString()
+            + string("\n1. its type: ") + tp0->toString());
+
+      return statMpq;
     }
 
     case IFNEG:
@@ -1168,6 +1200,15 @@ start_run_code:
         r1->dec();
         return NULL;
       }
+    }
+    case RAT_CAST:
+    {
+      Expr *r1 = run_code(e->kids[0]);
+      if (!r1) return NULL;
+      mpq_t r;
+      mpq_init(r);
+      mpq_set_num(r, ((IntExpr *)r1)->n);
+      return new RatExpr(r);
     }
     case IFNEG:
     case IFZERO:

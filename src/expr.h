@@ -50,6 +50,7 @@ enum
   NEG,
   IFNEG,
   IFZERO,
+  RAT_CAST,
   LET,
   RUN,
   FAIL,
