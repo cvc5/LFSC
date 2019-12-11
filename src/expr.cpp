@@ -767,23 +767,35 @@ void Expr::print(ostream &os)
         case RAT_EXPR:
         {
           RatExpr *e = (RatExpr *)this;
+          mpq_t tmp;
+          mpq_init(tmp);
+
           if (mpq_sgn(e->n) < 0)
           {
             os << "(~ ";
-            mpq_t tmp;
-            mpq_init(tmp);
             mpq_neg(tmp, e->n);
-            char *s = mpq_get_str(0, 10, tmp);
-            os << s;
-            free(s);
-            mpq_clear(tmp);
-            os << ")";
           }
           else
           {
-            char *s = mpq_get_str(0, 10, e->n);
-            os << s;
-            free(s);
+            mpq_set(tmp, e->n);
+          }
+
+          mpz_t tmp_num;
+          mpz_init(tmp_num);
+          mpq_get_num(tmp_num, tmp);
+          char *s = mpz_get_str(0, 10, tmp_num);
+          os << s << "/";
+          free(s);
+
+          mpz_t tmp_denom;
+          mpz_init(tmp_denom);
+          mpq_get_den(tmp_denom, tmp);
+          s = mpz_get_str(0, 10, tmp_denom);
+          os << s;
+          free(s);
+
+          if (mpq_sgn(e->n) < 0) {
+            os << ")";
           }
           break;
         }
