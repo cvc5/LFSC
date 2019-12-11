@@ -109,7 +109,7 @@ def main():
     if 0 != code:
         stdout = result.stdout.read()
         if stdout:
-            print(stdout)
+            print(stdout.decode())
     return code
 
 if __name__ == '__main__':
