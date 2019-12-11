@@ -766,7 +766,7 @@ void sccwriter::write_code(
           write_dec(expr1, os, ind);
         }
         break;
-        case RAT_CAST:
+        case MPZ_TO_MPQ:
         {
           // calculate the value for the first expression
           std::string expr1;

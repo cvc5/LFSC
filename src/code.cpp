@@ -456,7 +456,7 @@ Expr *read_code()
                     break;
                   }
                   Expr* e = read_code();
-                  Expr* ret = new CExpr(RAT_CAST, e);
+                  Expr* ret = new CExpr(MPZ_TO_MPQ, e);
                   eat_char(')');
                   return ret;
                 }
@@ -784,7 +784,7 @@ Expr *check_code(Expr *_e)
       return tp0;
     }
 
-    case RAT_CAST:
+    case MPZ_TO_MPQ:
     {
       Expr *tp0 = check_code(e->kids[0]);
       tp0 = tp0->followDefs();
@@ -1201,7 +1201,7 @@ start_run_code:
         return NULL;
       }
     }
-    case RAT_CAST:
+    case MPZ_TO_MPQ:
     {
       Expr *r1 = run_code(e->kids[0]);
       if (!r1) return NULL;

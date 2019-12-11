@@ -923,7 +923,7 @@ void Expr::print(ostream &os)
       print_kids(os, e->kids);
       os << ")";
       break;
-    case RAT_CAST:
+    case MPZ_TO_MPQ:
       os << "(mpz_to_mpq";
       print_kids(os, e->kids);
       os << ")";
