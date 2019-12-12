@@ -1,0 +1,14 @@
+(declare sort type)
+(declare term (! s sort type))
+
+(declare Real sort)
+
+(declare var type)
+(declare real_var (! v var (term Real)))
+(declare real_lit (! v mpq (term Real)))
+(declare +_Real (! a (term Real) (! b (term Real) (term Real))))
+
+(program reverse ((t (term Real))) (term Real)
+         (match t
+                ((+_Real a b) (+_Real (reverse b) (reverse a)))
+                (default t)))

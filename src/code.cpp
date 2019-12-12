@@ -684,14 +684,14 @@ Expr *check_code(Expr *_e)
               string("A function is not being fully applied in code.\n")
               + string("1. the application: ") + e->toString()
               + string("\n2. its (functional) type: ") + cur->toString());
-        if (argtps[i]->getop() == APP)
-          argtps[i] = ((CExpr *)argtps[i])->kids[0];
-        if (!argtps[i]->defeq(cur->kids[1]))
+        bool types_match =
+          argtps[i]->defeq(cur->kids[1]);
+        bool app_types_match =
+          argtps[i]->getop() == APP && static_cast<CExpr *>(argtps[i])->kids[0]->defeq(cur->kids[1]);
+        if (!types_match && !app_types_match)
         {
-          char buf[1024];
-          sprintf(buf, "%d", i);
           report_error(
-              string("Type mismatch for argument ") + string(buf)
+              string("Type mismatch for argument ") + std::to_string(i)
               + string(" in application in code.\n")
               + string("1. the application: ") + e->toString()
               + string("\n2. the head's type: ") + tp->toString()
@@ -959,18 +959,14 @@ Expr *check_code(Expr *_e)
     case MATCH:
     {
       SymSExpr *scruttp = (SymSExpr *)check_code(e->kids[0]);
-      Expr *tptp = NULL;
-      if (scruttp->getclass() == SYMS_EXPR && !scruttp->val)
+      Expr *kind = compute_kind(scruttp);
+      if (kind != statType && !scruttp->isDatatype())
       {
-        tptp = symbols->get(scruttp->s.c_str()).second;
-      }
-      if (!tptp->isType(statType))
-      {
-        string errstr = (string("The scrutinee of a match is not ")
-                         + string("a plain piece of data.\n")
-                         + string("1. the scrutinee: ") + e->kids[0]->toString()
-                         + string("\n2. its type: ") + scruttp->toString());
-        report_error(errstr);
+          report_error(string("The match scrutinee's type is neither proper, nor a datatypes")
+                       + string("\n1. the type: ")
+                       + scruttp->toString()
+                       + string("\n2. its kind: ")
+                       + (kind == nullptr ? string("none") : kind->toString()));
       }
 
       int i = 1;
@@ -1036,7 +1032,7 @@ Expr *check_code(Expr *_e)
 
         if (!mtp)
           mtp = tp;
-        else if (mtp != tp)
+        else if (!mtp->defeq(tp))
           report_error(
               string("Types for bodies of match cases or the default differ.")
               + string("\n1. type for first case's body: ") + mtp->toString()
@@ -1406,7 +1402,7 @@ start_run_code:
       Expr **cur = ((CExpr *)prog->kids[1])->kids;
       vector<Expr *> old_vals;
       SymExpr *var;
-      int i = 0;
+      size_t i = 0;
 
       if (run_scc && e->get_head(false)->getclass() == SYMS_EXPR)
       {

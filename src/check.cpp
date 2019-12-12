@@ -1189,24 +1189,14 @@ void check_file(std::istream& in,
             statType->inc();
             int prev = open_parens;
             Expr *tp = check(true, NULL, &tmp, 0, true);
-            if (tp->getclass() == SYMS_EXPR)
+            Expr *kind = compute_kind(tp);
+            if (kind != statType && !tp->isDatatype())
             {
-              pair<Expr *, Expr *> p =
-                  symbols->get(((SymSExpr *)tp)->s.c_str());
-              Expr *tptp = p.second;
-              if (!tptp->isType(statType))
-              {
-                report_error(string("Bad argument for side condition"));
-              }
-            }
-            else
-            {
-              if (!tp->isDatatype())
-              {
-                report_error(string("Type for a program variable is not a ")
-                             + string("datatype.\n1. the type: ")
-                             + tp->toString());
-              }
+                report_error(string("A program argument's type is neither proper, nor a datatype.")
+                             + string("\n1. the type: ")
+                             + tp->toString()
+                             + string("\n2. its kind: ")
+                             + (kind == nullptr ? string("none") : kind->toString()));
             }
             eat_excess(prev);
 
@@ -1223,11 +1213,15 @@ void check_file(std::istream& in,
           // read the return type of the program
           Expr* progtpret = check(true, statType, &tmp, 0, true);
           eat_excess(prev);
-
-          if (!progtpret->isDatatype())
-            report_error(string("Return type for a program is not a")
-                         + string(" datatype.\n1. the type: ")
-                         + progtpret->toString());
+          Expr* kind = compute_kind(progtpret);
+          if (kind != statType && !progtpret->isDatatype())
+          {
+                report_error(string("A program's return type is neither proper, nor a datatype.")
+                             + string("\n1. the type: ")
+                             + progtpret->toString()
+                             + string("\n2. its kind: ")
+                             + (kind == nullptr ? string("none") : kind->toString()));
+          }
 
           Expr *progcode = read_code();
 
@@ -1360,6 +1354,89 @@ void cleanup()
     }
   }
 }
+
+Expr* compute_kind(Expr* e)
+{
+  switch (e->getclass())
+  {
+    case CEXPR:
+    {
+      CExpr* ce = static_cast<CExpr *>(e);
+      switch (e->getop())
+      {
+        case APP:
+        {
+          Expr * head = compute_kind(ce->kids[0]);
+          std::vector<std::pair<SymExpr *, Expr *>> prev_pi_vars_and_values;
+          size_t next_kid_i = 1;
+          for (;
+               head->getop() == PI && ce->kids[next_kid_i] != nullptr;
+               ++next_kid_i) {
+            Expr * actual_arg = compute_kind(ce->kids[next_kid_i]);
+            CExpr * pi = static_cast<CExpr *>(head);
+            Expr * range = pi->kids[2];
+            SymExpr *pi_var = static_cast<SymExpr *>(pi->kids[0]);
+            prev_pi_vars_and_values.push_back(std::make_pair(pi_var, pi_var->val));
+            pi_var->val = actual_arg;
+            head = compute_kind(range);
+          }
+          if (ce->kids[next_kid_i] != nullptr && head->getop() != PI) {
+            // We're not holding a function anymore, but there are more arguments!
+            report_error(string("When reducing ") + e->toString()
+                         + string(" I got the expression ") + head->toString()
+                         + string(" applied to some arguments, but that "
+                                  "expression is not a function"));
+          }
+          for (const auto & p : prev_pi_vars_and_values) {
+            p.first->val = p.second;
+          }
+          return head;
+        }
+        case MPQ:
+        case MPZ:
+        {
+          return statType;
+        }
+        default:
+        {
+          return e;
+        }
+      }
+    }
+    case SYMS_EXPR:
+    case SYM_EXPR:
+    {
+      Expr * reference = e->followDefs();
+      if (reference->getclass() == SYMS_EXPR) {
+        auto ref_value_and_type = symbols->get(static_cast<SymSExpr *>(reference)->s.c_str());
+        if (ref_value_and_type.second != nullptr) {
+          reference = ref_value_and_type.second;
+        }
+      }
+      if (reference == e) {
+        return e;
+      } else {
+        return compute_kind(reference);
+      }
+    }
+    case RAT_EXPR:
+    case INT_EXPR:
+    {
+      return e;
+    }
+    case HOLE_EXPR:
+    {
+      report_error("Hole expression have no kind.");
+      return nullptr; // unreachable
+    }
+    default:
+    {
+      report_error("Unkown expression class in compute_kind()");
+      return nullptr; // unreachable
+    }
+  }
+}
+
 
 void init()
 {

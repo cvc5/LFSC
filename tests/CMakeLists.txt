@@ -4,6 +4,7 @@ set(lfsc_test_file_list
   eq_mpz.plf
   issue20.plf
   issue8-mpexp.plf
+  formal_type_args.plf
   mp_prefix.plf
   mp_smaller_test.plf
   mpz_to_mpq.plf
@@ -17,6 +18,7 @@ set(lfsc_test_file_list
   th_bv.plf
   th_bv_bitblast.plf
   th_int.plf
+  th_quant.plf
   unused_pi_param_rational_in_body.plf
   use-bool.plf
   use-use-bool.plf

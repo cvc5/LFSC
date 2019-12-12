@@ -188,4 +188,11 @@ extern Expr *statMpz;
 extern Expr *statMpq;
 extern Expr *statType;
 
+/**
+ * Given a type, `e`, computes its kind.
+ *
+ * In particular, this will be `statType` if the kind is that of proper types.
+ */
+Expr* compute_kind(Expr* e);
+
 #endif
