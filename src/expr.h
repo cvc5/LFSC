@@ -50,6 +50,7 @@ enum
   NEG,
   IFNEG,
   IFZERO,
+  MPZ_TO_MPQ,
   LET,
   RUN,
   FAIL,

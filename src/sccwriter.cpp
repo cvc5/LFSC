@@ -766,6 +766,28 @@ void sccwriter::write_code(
           write_dec(expr1, os, ind);
         }
         break;
+        case MPZ_TO_MPQ:
+        {
+          // calculate the value for the first expression
+          std::string expr1;
+          write_expr(((CExpr*)code)->kids[0], os, ind, expr1);
+          std::ostringstream ss;
+          ss << "rnum" << rnumCount;
+          rnumCount++;
+          indent(os, ind);
+          os << "mpq_t " << ss.str().c_str() << ";" << std::endl;
+          indent(os, ind);
+          os << "mpq_init(" << ss.str().c_str() << ");" << std::endl;
+          indent(os, ind);
+          os << "mpq_set_num( " << ss.str().c_str() << ", ((IntExpr*)"
+             << expr1.c_str() << "->followDefs())->n );" << std::endl;
+          indent(os, ind);
+          os << retModString.c_str() << "new RatExpr(" << ss.str().c_str()
+             << ");" << std::endl;
+          // clean up memory
+          write_dec(expr1, os, ind);
+        }
+        break;
         case IFNEG:
         case IFZERO:
         {

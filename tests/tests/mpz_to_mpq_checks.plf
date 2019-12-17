@@ -1,0 +1,31 @@
+; Deps: mpz_to_mpq.plf
+(declare checked_convert
+  (! x mpz
+  (! y mpq type)))
+(declare check_convert
+  (! x mpz
+  (! y mpq
+    (! u (^ (convert x) y)
+      (checked_convert x y)))))
+
+(check
+  (: (checked_convert 1 1/1) (check_convert 1 1/1)))
+(check
+  (: (checked_convert (~ 2) (~ 2/1)) (check_convert (~ 2) (~ 2/1))))
+(check
+  (: (checked_convert 10 10/1) (check_convert 10 10/1)))
+
+(declare checked_is_floor
+  (! x mpz
+  (! y mpq
+     type)))
+(declare check_is_floor
+  (! x mpz
+  (! y mpq
+    (! u (^ (is_floor x y) tt)
+      (checked_is_floor x y)))))
+
+(check
+  (: (checked_is_floor 1 1/1) (check_is_floor 1 1/1)))
+(check
+  (: (checked_is_floor 1 3/2) (check_is_floor 1 3/2)))

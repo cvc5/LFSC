@@ -935,6 +935,11 @@ void Expr::print(ostream &os)
       print_kids(os, e->kids);
       os << ")";
       break;
+    case MPZ_TO_MPQ:
+      os << "(mpz_to_mpq";
+      print_kids(os, e->kids);
+      os << ")";
+      break;
     case IFNEG:
       os << "(ifneg";
       print_kids(os, e->kids);

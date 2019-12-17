@@ -1,0 +1,26 @@
+; Deps: bool.plf
+(program convert ((z mpz)) mpq
+         (mpz_to_mpq z))
+
+(program is_floor ((f mpz) (x mpq)) bool
+         (mp_ifneg (mp_add x (mp_neg (mpz_to_mpq f)))
+                   ff
+                   (mp_ifneg (mp_add x (mp_neg (mpz_to_mpq (mp_add f 1))))
+                             tt
+                             ff)))
+
+; Check that various other names do not get mis-parsed
+(program mpz_to_mpqq ((z mpz)) mpz
+         z)
+(program mp_to_mpq ((z mpz)) mpz
+         z)
+(program mpz_to_mp ((z mpz)) mpz
+         z)
+(program mp_z_to_mpq ((z mpz)) mpz
+         z)
+
+(program id ((z mpz)) mpz
+         (mpz_to_mpqq
+           (mp_to_mpq
+             (mpz_to_mp
+               (mp_z_to_mpq z)))))
