@@ -220,6 +220,8 @@ extern Expr *statType;
  *   * Real (it is not a type, and does not have a kind)
  *          (this function would return `sort`)
  *
+ * Bibliography:
+ *   * _Advanced Topics in Types and Programming Languages_
  */
 Expr* compute_kind(Expr* e);
 
