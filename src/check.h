@@ -192,6 +192,34 @@ extern Expr *statType;
  * Given a type, `e`, computes its kind.
  *
  * In particular, this will be `statType` if the kind is that of proper types.
+ *
+ * Since our system doen't draw a clear distinction between kinding and typing,
+ * this function doesn't either. It could also be regarded as a function that
+ * computes the type of a term. While values technically have no kind, this
+ * function would return their type instead of an error.
+ *
+ * It is different from "check" in that it computes the kind/type of in-memory
+ * terms, not serialized ones.
+ *
+ * Given these declarations:
+ *
+ *     (declare bool type)
+ *     (declare sort type)
+ *     (declare Real sort)
+ *     (declare term (! s sort type))
+ *
+ * Examples of proper types:
+ *
+ *     bool
+ *     sort
+ *     (term Real)
+ *
+ * Example of non-proper types:
+ *
+ *   * term (it has kind `(! s sort type)`)
+ *   * Real (it is not a type, and does not have a kind)
+ *          (this function would return `sort`)
+ *
  */
 Expr* compute_kind(Expr* e);
 

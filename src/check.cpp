@@ -1357,6 +1357,7 @@ void cleanup()
 
 Expr* compute_kind(Expr* e)
 {
+  e = e->followDefs();
   switch (e->getclass())
   {
     case CEXPR:
@@ -1372,7 +1373,7 @@ Expr* compute_kind(Expr* e)
           for (;
                head->getop() == PI && ce->kids[next_kid_i] != nullptr;
                ++next_kid_i) {
-            Expr * actual_arg = compute_kind(ce->kids[next_kid_i]);
+            Expr * actual_arg = ce->kids[next_kid_i]->followDefs();
             CExpr * pi = static_cast<CExpr *>(head);
             Expr * range = pi->kids[2];
             SymExpr *pi_var = static_cast<SymExpr *>(pi->kids[0]);
@@ -1413,11 +1414,7 @@ Expr* compute_kind(Expr* e)
           reference = ref_value_and_type.second;
         }
       }
-      if (reference == e) {
-        return e;
-      } else {
-        return compute_kind(reference);
-      }
+      return reference;
     }
     case RAT_EXPR:
     case INT_EXPR:
@@ -1431,7 +1428,7 @@ Expr* compute_kind(Expr* e)
     }
     default:
     {
-      report_error("Unkown expression class in compute_kind()");
+      report_error("Unknown expression class in compute_kind()");
       return nullptr; // unreachable
     }
   }

@@ -962,7 +962,7 @@ Expr *check_code(Expr *_e)
       Expr *kind = compute_kind(scruttp);
       if (kind != statType && !scruttp->isDatatype())
       {
-          report_error(string("The match scrutinee's type is neither proper, nor a datatypes")
+          report_error(string("The match scrutinee's type is neither proper, nor a datatype")
                        + string("\n1. the type: ")
                        + scruttp->toString()
                        + string("\n2. its kind: ")
