@@ -684,10 +684,10 @@ Expr *check_code(Expr *_e)
               string("A function is not being fully applied in code.\n")
               + string("1. the application: ") + e->toString()
               + string("\n2. its (functional) type: ") + cur->toString());
-        bool types_match =
-          argtps[i]->defeq(cur->kids[1]);
+        bool types_match = argtps[i]->defeq(cur->kids[1]);
         bool app_types_match =
-          argtps[i]->getop() == APP && static_cast<CExpr *>(argtps[i])->kids[0]->defeq(cur->kids[1]);
+            argtps[i]->getop() == APP
+            && static_cast<CExpr*>(argtps[i])->kids[0]->defeq(cur->kids[1]);
         if (!types_match && !app_types_match)
         {
           report_error(
@@ -959,14 +959,15 @@ Expr *check_code(Expr *_e)
     case MATCH:
     {
       SymSExpr *scruttp = (SymSExpr *)check_code(e->kids[0]);
-      Expr *kind = compute_kind(scruttp);
+      Expr* kind = compute_kind(scruttp);
       if (kind != statType && !scruttp->isDatatype())
       {
-          report_error(string("The match scrutinee's type is neither proper, nor a datatype")
-                       + string("\n1. the type: ")
-                       + scruttp->toString()
-                       + string("\n2. its kind: ")
-                       + (kind == nullptr ? string("none") : kind->toString()));
+        report_error(
+            string(
+                "The match scrutinee's type is neither proper, nor a datatype")
+            + string("\n1. the type: ") + scruttp->toString()
+            + string("\n2. its kind: ")
+            + (kind == nullptr ? string("none") : kind->toString()));
       }
 
       int i = 1;
