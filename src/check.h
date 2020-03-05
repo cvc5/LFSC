@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <hash_map>
 #else
-#include <ext/hash_map>
+#include <unordered_map>
 #endif
 
 #include <cstddef>
@@ -158,8 +158,8 @@ inline const char *prefix_id(bool skip_ws = true)
 typedef std::hash_map<std::string, Expr *> symmap;
 typedef std::hash_map<std::string, SymExpr *> symmap2;
 #else
-typedef __gnu_cxx::hash_map<std::string, Expr *> symmap;
-typedef __gnu_cxx::hash_map<std::string, SymExpr *> symmap2;
+typedef std::unordered_map<std::string, Expr *> symmap;
+typedef std::unordered_map<std::string, SymExpr *> symmap2;
 #endif
 extern symmap2 progs;
 extern std::vector<Expr *> ascHoles;
@@ -170,19 +170,6 @@ extern std::map<SymExpr *, int> mark_map;
 
 extern std::vector<std::pair<std::string, std::pair<Expr *, Expr *> > >
     local_sym_names;
-
-#ifndef _MSC_VER
-namespace __gnu_cxx {
-template <>
-struct hash<std::string>
-{
-  size_t operator()(const std::string &x) const
-  {
-    return hash<const char *>()(x.c_str());
-  }
-};
-}  // namespace __gnu_cxx
-#endif
 
 extern Expr *statMpz;
 extern Expr *statMpq;

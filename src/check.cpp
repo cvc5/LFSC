@@ -33,7 +33,7 @@ std::vector<Expr *> ascHoles;
 
 Trie<pair<Expr *, Expr *> > *symbols = new Trie<pair<Expr *, Expr *> >;
 
-hash_map<string, bool> imports;
+std::unordered_map<string, bool> imports;
 std::map<SymExpr *, int> mark_map;
 std::vector<std::pair<std::string, std::pair<Expr *, Expr *> > >
     local_sym_names;

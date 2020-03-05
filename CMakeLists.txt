@@ -19,7 +19,6 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 add_cxx_flag("-Wall")
-add_cxx_flag("-Wno-deprecated")
 add_cxx_flag("-std=gnu++11")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
