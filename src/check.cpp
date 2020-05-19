@@ -570,7 +570,6 @@ start_check:
 #endif
           char c;
           vector<HoleExpr *> holes;
-          vector<bool> free_holes;
           while ((c = non_ws()) != ')')
           {
             our_ungetc(c);
