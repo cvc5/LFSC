@@ -1,4 +1,5 @@
 set(lfsc_test_file_list
+  ann_lambda.plf
   bad-char.plf
   bool.plf
   eq_mpz.plf
