@@ -1,0 +1,19 @@
+(declare-type bool ())
+(declare tt bool)
+(declare ff bool)
+
+
+(program eq_mpz ((x mpz) (y mpz) (b bool)) bool
+  (ifequal x y tt ff))
+
+(declare-type checked_mpz (mpz))
+
+(declare-rule check_eq_mqz (var x mpz) (var y mpz) (var b bool)
+
+                 (provided (eq_mpz x y b) tt)
+;--------------------------------------------                    
+ (checked_mpz x)
+)
+
+(check
+  (has-proof (checked_mpz 5) (check_eq_mqz 5 5 tt)))
