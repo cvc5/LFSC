@@ -14,3 +14,4 @@ Makefile.in
 \#*\#
 *.swp
 build/*
+doc/.antlr
