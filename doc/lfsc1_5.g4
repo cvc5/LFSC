@@ -41,7 +41,6 @@ kind
   | '(' '!' iden ntype kind ')' 
 // Extension //////////////
   | '(' '->' type+ kind ')' 
-  | '(' 'provided' code term ')'
   ;
 ////////////////////////////////
 // (-> τ₁ ⋯ τᵢ κ) with i > 1
@@ -51,19 +50,22 @@ kind
 // (-> τ κ)
 // is equivalent to
 // (-> ξ τ κ) for some fresh ξ
+
+ntype 
+  : '(' '^' code term ')'
+  | type
+// Extension ///////////////////
+  | '(' 'provided' code term ')'
+////////////////////////////////
+  ;
 //
 // (provided c t)
 // is equivalent to
 // (! ξ (^ c t)) for some fresh ξ
 
-ntype 
-  : '(' '^' code term ')'
-  | type
-  ;
-
-// Extension ////////////////////////
+// Extension /////////////////////
 vtype : '(' 'var' iden ntype ')' ;
-/////////////////////////////////////
+//////////////////////////////////
 
 type 
   : iden
