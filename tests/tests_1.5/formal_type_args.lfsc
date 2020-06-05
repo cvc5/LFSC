@@ -1,0 +1,14 @@
+(declare-type sort ())
+(declare-type term (sort))
+
+(declare Real sort)
+
+(declare-type tvar ())
+(declare real_var (-> tvar (term Real)))
+(declare real_lit (-> mpq (term Real)))
+(declare +_Real (-> (term Real) (term Real) (term Real)))
+
+(program reverse ((t (term Real))) (term Real)
+         (match t
+                ((+_Real a b) (+_Real (reverse b) (reverse a)))
+                (default t)))
