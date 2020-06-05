@@ -1,0 +1,506 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; SMT syntax and semantics (not theory-specific)
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Deps: sat.lfsc
+
+(declare-type formula ())
+(declare-type th_holds (formula))
+
+; standard logic definitions
+(declare true formula)
+(declare false formula)
+
+(define formula_op1 (-> formula formula))
+
+(define formula_op2 (-> formula formula formula))
+
+(define formula_op3 (-> formula formula formula formula))
+
+(declare not formula_op1)
+(declare and formula_op2)
+(declare or formula_op2)
+(declare impl formula_op2)
+(declare iff formula_op2)
+(declare xor formula_op2)
+(declare ifte formula_op3)
+
+; terms
+(declare-type sort ())
+(declare-type term (sort))	; declared terms in formula
+
+; standard definitions for =, ite, let and flet
+(declare = (-> (var s sort) (term s) (term s) formula))
+
+; alternative syntax, highlighting that s is a type parameter
+(declare ite (! s sort
+               (-> formula (term s) (term s) (term s))))
+
+(declare let (-> (var s sort) (term s) (-> (term s) formula) formula))
+
+(declare flet (-> formula (-> formula formula) formula))
+
+; We view applications of predicates as terms of sort "Bool".
+; Such terms can be injected as atomic formulas using "p_app".
+(declare Bool sort)				; the special sort for predicates
+(declare p_app (-> (term Bool) formula))	; propositional application of term
+
+; boolean terms
+(declare t_true (term Bool))
+(declare t_false (term Bool))
+
+(declare-rule t_t_neq_f
+
+;------------------------------------------
+  (th_holds (not (= Bool t_true t_false)))
+)
+
+(declare-rule pred_eq_t (var x (term Bool))
+ 
+  (th_holds (p_app x))
+;------------------------------
+  (th_holds (= Bool x t_true))
+)
+
+(declare-rule pred_eq_f (var x (term Bool))
+
+  (th_holds (not (p_app x)))
+;-------------------------------
+  (th_holds (= Bool x t_false))
+)
+
+(declare f_to_b (-> formula (term Bool)))
+
+(declare-rule true_preds_equal
+  (var x1 (term Bool)) (var x2 (term Bool))
+
+  (th_holds (p_app x1))
+  (th_holds (p_app x2))
+;---------------------------
+  (th_holds (= Bool x1 x2))
+)
+
+(declare-rule false_preds_equal
+  (var x1 (term Bool)) (var x2 (term Bool))
+
+  (th_holds (not (p_app x1)))
+  (th_holds (not (p_app x2)))
+;-----------------------------
+  (th_holds (= Bool x1 x2))
+)
+
+; CT
+; This is a strange rule. Why does it a premise? 
+(declare-rule pred_refl_pos (var x1 (term Bool)) 
+  
+  (th_holds (p_app x1))
+;---------------------------
+  (th_holds (= Bool x1 x1))
+)
+
+; CT
+; Another is a strange rule. Why does it a premise? 
+(declare-rule pred_refl_neg (var x1 (term Bool))
+
+  (th_holds (not (p_app x1)))
+;-----------------------------
+  (th_holds (= Bool x1 x1))
+)
+
+(declare-rule pred_not_iff_f (var x (term Bool))
+
+  (th_holds (not (iff false (p_app x))))
+;----------------------------------------
+  (th_holds (= Bool t_true x))
+)
+
+(declare-rule pred_not_iff_f_2 (var x (term Bool))
+
+  (th_holds (not (iff (p_app x) false)))
+;----------------------------------------
+  (th_holds (= Bool x t_true))
+)
+
+(declare-rule pred_not_iff_t (var x ( term Bool))
+
+  (th_holds (not (iff true (p_app x))))
+;--------------------------------------
+  (th_holds (= Bool t_false x))
+)
+
+(declare-rule pred_not_iff_t_2 (var x (term Bool))
+
+  (th_holds (not (iff (p_app x) true)))
+;--------------------------------------
+  (th_holds (= Bool x t_false))
+)
+
+(declare-rule pred_iff_f (var x (term Bool))
+
+  (th_holds (iff false (p_app x)))
+;---------------------------------- 
+  (th_holds (= Bool t_false x))
+)
+
+(declare-rule pred_iff_f_2 (var x (term Bool))
+
+  (th_holds (iff (p_app x) false))
+;---------------------------------- 
+  (th_holds (= Bool x t_false))
+)
+
+(declare-rule pred_iff_t (var x (term Bool))
+
+  (th_holds (iff true (p_app x)))
+;--------------------------------- 
+  (th_holds (= Bool t_true x))
+)
+
+(declare-rule pred_iff_t_2 (var x (term Bool))
+
+  (th_holds (iff (p_app x) true))
+;---------------------------------
+  (th_holds (= Bool x t_true))
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; CNF Clausification
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; binding between an LF var and an (atomic) formula
+
+(declare-type atom (bvar formula))
+
+; binding between two LF vars
+(declare bvatom-type sat_v (bvar bvar))
+
+(declare-rule decl_atom 
+  (var f formula) (var v bvar)
+
+  (-> (atom v f) (holds cln))
+;-----------------------------
+  (holds cln)
+)
+
+
+;; declare atom enhanced with mapping
+;; between SAT prop variable and BVSAT prop variable
+(declare-rule decl_bvatom (f formula)
+
+  (! v bvar (! bv_v bvar 
+    (-> (atom v f) 
+        (atom bv_v f) 
+        (bvatom v bv_v) 
+        (holds cln)
+    )))
+;----------------------
+  (holds cln)
+)
+
+; clausify a formula directly
+(declare-rule clausify_form
+  (var f formula) (var v bvar)
+
+  (atom v f)  (th_holds f)
+;---------------------------
+  (holds (clc (pos v) cln))
+)
+
+(declare-rule clausify_form_not
+  (var f formula) (var v bvar)
+
+  (atom v f)  (th_holds (not f))
+;--------------------------------
+  (holds (clc (neg v) cln))
+)
+
+(declare-rule clausify_false
+ 
+  (th_holds false)
+;------------------
+  (holds cln)
+)
+
+(declare-rule th_let_pf (var f formula)
+
+  (th_holds f)  (-> (th_holds f) (holds cln))
+;---------------------------------------------
+  (holds cln)
+)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; Natural deduction rules : used for CNF
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; for eager bit-blasting
+(declare-rule iff_symm (var f formula)
+
+;----------------------
+  (th_holds (iff f f))
+)
+
+
+;; contradiction
+
+(declare-rule contra (var f formula)
+
+  (th_holds f)  (th_holds (not f))
+;----------------------------------
+  (th_holds false)
+)
+
+; truth
+(declare-rule truth 
+
+;-----------------
+  (th_holds true)
+)
+
+;; not not
+
+(declare-rule not_not_intro (var f formula)
+
+  (th_holds f)
+;--------------------------
+  (th_holds (not (not f)))
+)
+
+(declare-rule not_not_elim (var f formula)
+
+  (th_holds (not (not f)))
+;--------------------------
+  (th_holds f)
+)
+
+;; or elimination
+
+(declare-rule or_elim_1
+  (var f1 formula) (var f2 formula)
+
+  (th_holds (not f1))  (th_holds (or f1 f2))
+;--------------------------------------------
+  (th_holds f2)
+)
+
+(declare-rule or_elim_2
+  (var f1 formula) (var f2 formula)
+
+  (th_holds (not f2))  (th_holds (or f1 f2))
+;--------------------------------------------
+  (th_holds f1)
+)
+
+(declare-rule not_or_elim
+  (var f1 formula) (var f2 formula)
+
+  (th_holds (not (or f1 f2)))
+;------------------------------------
+  (th_holds (and (not f1) (not f2)))
+)
+
+;; and elimination
+
+(declare-rule and_elim_1
+  (var f1 formula) (var f2 formula)
+
+  (th_holds (and f1 f2))
+;-----------------------------
+  (th_holds f1)
+)
+
+(declare-rule and_elim_2
+  (var f1 formula) (var f2 formula)
+
+  (th_holds (and f1 f2))
+;-----------------------------
+  (th_holds f2)
+)
+
+(declare-rule not_and_elim
+  (var f1 formula) (var f2 formula)
+
+  (th_holds (not (and f1 f2)))
+;-----------------------------------
+  (th_holds (or (not f1) (not f2)))
+)
+
+;; impl 
+
+(declare-rule impl_intro 
+  (var f1 formula) (var f2 formula)
+
+  (-> (th_holds f1) (th_holds f2))
+;----------------------------------
+  (th_holds (impl f1 f2))
+)
+
+(declare-rule impl_elim
+  (var f1 formula) (var f2 formula)
+
+  (th_holds (impl f1 f2))
+;-----------------------------
+  (th_holds (or (not f1) f2))
+)
+
+(declare-rule not_impl_elim
+  (var f1 formula) (var f2 formula)
+
+  (th_holds (not (impl f1 f2)))
+;-------------------------------
+  (th_holds (and f1 (not f2)))
+)
+
+;; iff elimination
+
+(declare-rule iff_elim_1
+  (var f1 formula) (var f2 formula)
+
+  (th_holds (iff f1 f2))
+;-------------------------------
+  (th_holds (or (not f1) f2))
+)
+
+(declare-rule iff_elim_2
+  (var f1 formula) (var f2 formula)
+
+  (th_holds (iff f1 f2))
+;-------------------------------
+  (th_holds (or f1 (not f2)))
+)
+
+(declare-rule not_iff_elim
+  (var f1 formula) (var f2 formula)
+
+  (th_holds (not (iff f1 f2)))
+;-------------------------------
+  (th_holds (iff f1 (not f2)))
+)
+
+; xor elimination
+
+(declare-rule xor_elim_1
+  (var f1 formula) (var f2 formula)
+
+  (th_holds (xor f1 f2))
+;-------------------------------
+  (th_holds (or (not f1) (not f2)))
+)
+
+(declare-rule xor_elim_2
+  (var f1 formula) (var f2 formula)
+
+  (th_holds (xor f1 f2))
+;-------------------------------
+  (th_holds (or f1 f2))
+)
+
+(declare-rule not_xor_elim
+  (var f1 formula) (var f2 formula)
+
+  (th_holds (not (xor f1 f2)))
+;-------------------------------
+  (th_holds (iff f1 f2))
+)
+
+;; ite elimination
+
+(declare-rule ite_elim_1
+  (var a formula) (var b formula) (var c formula)
+
+  (th_holds (ifte a b c))
+;-------------------------------
+  (th_holds (or (not a) b))
+)
+
+(declare-rule ite_elim_2
+  (var a formula) (var b formula) (var c formula)
+  (th_holds (ifte a b c))
+;-------------------------------
+  (th_holds (or a c))
+)
+
+(declare-rule ite_elim_3
+  (var a formula) (var b formula) (var c formula)
+  
+  (th_holds (ifte a b c))
+;-------------------------------
+  (th_holds (or b c))
+)
+
+(declare-rule not_ite_elim_1
+  (var a formula) (var b formula) (var c formula)
+
+  (th_holds (not (ifte a b c)))
+;-------------------------------
+  (th_holds (or (not a) (not b)))
+)
+
+(declare-rule not_ite_elim_2
+  (var a formula) (var b formula) (var c formula)
+  (th_holds (not (ifte a b c)))
+;-------------------------------
+  (th_holds (or a (not c)))
+)
+
+(declare-rule not_ite_elim_3
+  (var a formula) (var b formula) (var c formula)
+
+  (th_holds (not (ifte a b c)))
+;-------------------------------
+  (th_holds (or (not b) (not c)))
+)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; For theory lemmas
+; - make a series of assumptions and then derive a contradiction (or false)
+; - then the assumptions yield a formula like "v1 -> v2 -> ... -> vn -> false"
+; - In CNF, it becomes a clause: "~v1, ~v2, ..., ~vn"
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(declare-rule ast
+
+  (atom v f)  (-> (th_holds f) (holds c))
+;-----------------------------------------
+  (holds (clc (neg v) C))
+)
+
+(declare-rule asf
+  (var v bvar) (var f formula) (var c clause)
+
+  (atom v f)  (-> (th_holds (not f)) (holds c))
+;-----------------------------------------------
+  (holds (clc (pos v) C))
+)
+
+;; Bitvector lemma constructors to assume
+;; the unit clause containing the assumptions
+;; it also requires the mapping between bv_v and v
+;; The resolution proof proving false will use bv_v as the definition clauses use bv_v
+;; but the Problem clauses in the main SAT solver will use v so the learned clause is in terms of v
+(declare-rule bv_asf
+  (var v bvar) (var bv_v bvar) (var f formula) (var c clause)
+
+  (atom v f) ;; passed in
+  (bvatom v bv_v) ; establishes the equivalence of v to bv_
+  (-> (holds (clc (neg bv_v) cln)) (holds c)) ;; l binding to be used in proof
+;---------------------------------------------
+  (holds (clc (pos v) c))
+)
+
+(declare-rule bv_ast
+  (var v bvar) (var bv_v bvar) (var f formula) (var c clause)
+
+  (atom v f)       ; this is specified
+  (bvatom v bv_v) ; establishes the equivalence of v to bv_v
+  (-> (holds (clc (pos bv_v) cln)) (holds c))
+;---------------------------------------------
+  (holds (clc (neg v) C))
+)
