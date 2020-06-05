@@ -1,0 +1,69 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; Theory of Arrays
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Deps: th_base.plf
+
+; sorts
+
+(declare Array (-> sort sort sort))
+
+; functions
+(declare write (var I sort) (var V sort)
+  (term (arrow (Array I V) (arrow I (arrow V 
+          (Array I V))))))
+
+(declare read (var I sort) (V V sort)
+  (term (arrow (Array I V)
+          (arrow I V))))
+
+; inference rules
+
+; read( a[i] = v, i ) == v
+(declare-rule row1 (var I sort) (var V sort)
+  (var a (term (Array I V)))
+  (var i (term I))
+  (var v (term V))
+
+;---------------------------------------------------------------------------------------
+  (th_holds (= _ (. _ _ (. _ _ (read I V) (. _ _ (. _ _ (. _ _ (write I V) a) i) v)) i)
+                 v))
+)
+
+; read( a[i] = v, j ) == read( a, j ) if i != j
+(declare row-rule (var I sort) (var V sort)
+  (var i (term I))
+  (var j (term I))
+  (var a (term (Array I V)))
+  (var v (term V))
+
+  (th_holds (not (= _ i j)))
+;---------------------------------------------------------------------------------------
+  (th_holds (= _ (. _ _ (. _ _ (read I V) (. _ _ (. _ _ (. _ _ (write I V) a) i) v)) j)
+                 (. _ _ (. _ _ (read I V) a) j)))
+)
+
+; i == j if read( a[i] = v, j ) != read( a, j )
+(declare negativerow-rule (var I sort) (var V sort)
+  (var i (term I))
+  (var j (term I))
+  (var a (term (Array I V)))
+  (var v (term V))
+
+	(th_holds (not (= _ (. _ _ (. _ _ (read I V) (. _ _ (. _ _ (. _ _ (write I V) a) i) v)) j)
+                      (. _ _ (. _ _ (read I V) a) j))))
+;--------------------------------------------------------------------------------------------
+  (th_holds (= _ i j))
+)
+
+(declare ext-rule (var I sort) (var V sort)
+  (var a (term (Array I V)))
+  (var b (term (Array I V)))
+  (! k (term I) 
+    (-> (th_holds (or (= _ a b) (not (= _ (. _ _ (. _ _ (read I V) a) k) 
+                                          (. _ _ (. _ _ (read I V) b) k)))))
+        (holds cln)))
+;----------------------------------------------------------------------------
+  (holds cln)
+)
