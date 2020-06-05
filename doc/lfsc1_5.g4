@@ -102,11 +102,16 @@ term
   | '(' ':' type term ')'
   | '(' '%' iden type term ')'
 // Extensions ///////////////////
+  | '(' 'lam' iden term ')'
   | '(' 'let' iden term term ')'
   | '(' 'has-proof' type term ')'
   | '(' 'assuming' vtype+ term ')'
   ;
 //////////////////////////////////
+// (lam ξ t)
+// is equivalent to
+// (\ ξ t)
+//
 // (let ξ t)
 // is equivalent to
 // (@ ξ t)
