@@ -51,7 +51,7 @@
   (var a (term (Array I V)))
   (var v (term V))
 
-	(th_holds (not (= _ (. _ _ (. _ _ (read I V) (. _ _ (. _ _ (. _ _ (write I V) a) i) v)) j)
+  (th_holds (not (= _ (. _ _ (. _ _ (read I V) (. _ _ (. _ _ (. _ _ (write I V) a) i) v)) j)
                       (. _ _ (. _ _ (read I V) a) j))))
 ;--------------------------------------------------------------------------------------------
   (th_holds (= _ i j))
