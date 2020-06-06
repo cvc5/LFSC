@@ -40,9 +40,14 @@ kind
   : 'type'
   | '(' '!' iden ntype kind ')' 
 // Extension //////////////
+  | '(' 'Forall' ntype kind ')' 
   | '(' '->' type+ kind ')' 
   ;
 ////////////////////////////////
+// (Forall ξ κ)
+// is equivalent to
+// (! ξ κ)
+//
 // (-> τ₁ ⋯ τᵢ κ) with i > 1
 // is equivalent to
 // (-> τ₁ (-> τ₂ ⋯ τᵢ κ))
@@ -74,9 +79,14 @@ type
   | '(' type term+ ')'
   | '(' '!' iden ntype type ')' 
 // Extension ///////////////////////////////
+  | '(' 'Forall' ntype type ')' 
   | '(' '->' ( ntype | vtype )+ type ')'  
 ////////////////////////////////////////////
   ;
+// (Forall ξ τ)
+// is equivalent to
+// (! ξ τ)
+//
 // (-> ν₁ ⋯ νᵢ τ) with i > 1
 // is equivalent to
 // (-> ν₁ (-> ν₂ ⋯ νᵢ τ))
