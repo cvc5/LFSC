@@ -33,20 +33,19 @@ command
 // is equivalent to
 // (declare r (-> r ν₁ ⋯ νᵢ τ))
 
-
 iden : ID ;
 
 kind 
   : 'type'
   | '(' '!' iden ntype kind ')' 
 // Extension //////////////
-  | '(' 'Forall' ntype kind ')' 
+  | '(' 'Forall' iden ntype kind ')' 
   | '(' '->' type+ kind ')' 
   ;
 ////////////////////////////////
-// (Forall ξ κ)
+// (Forall ξ τ κ)
 // is equivalent to
-// (! ξ κ)
+// (! ξ τ κ)
 //
 // (-> τ₁ ⋯ τᵢ κ) with i > 1
 // is equivalent to
@@ -56,17 +55,27 @@ kind
 // is equivalent to
 // (-> ξ τ κ) for some fresh ξ
 
+sc
+  : '^' 
+// Extension //
+  | 'provided' 
+///////////////
+  ;
+
+// types in negative position
 ntype 
-  : '(' '^' code term ')'
-  | type
-// Extension ///////////////////
-  | '(' 'provided' code term ')'
-////////////////////////////////
+  : '(' sc code term ')'   
+  | type             
+// Extension ///////////////////////////////////
+    ('(' sc code term ')')? 
+// side conditions optionally added *after* a
+// type is actually the official syntax of LFSC 
+////////////////////////////////////////////////
   ;
 //
 // (provided c t)
 // is equivalent to
-// (! ξ (^ c t)) for some fresh ξ
+// (^ c t)
 
 // Extension /////////////////////
 vtype : '(' 'var' iden ntype ')' ;
@@ -79,13 +88,13 @@ type
   | '(' type term+ ')'
   | '(' '!' iden ntype type ')' 
 // Extension ///////////////////////////////
-  | '(' 'Forall' ntype type ')' 
+  | '(' 'Forall' iden ntype type ')' 
   | '(' '->' ( ntype | vtype )+ type ')'  
 ////////////////////////////////////////////
   ;
-// (Forall ξ τ)
+// (Forall ξ τ₁ τ₂)
 // is equivalent to
-// (! ξ τ)
+// (! ξ τ₁ τ₂)
 //
 // (-> ν₁ ⋯ νᵢ τ) with i > 1
 // is equivalent to
@@ -155,6 +164,7 @@ code
 
 
 
-INT     : [0-9]+ ;
-RAT     : ('0' | [1-9][0-9]*) '/' [1-9][0-9]* ;
-ID : [a-zA-Z_][a-zA-Z0-9_']* ;
+INT : [0-9]+ ;
+RAT : ('0' | [1-9][0-9]*) '/' [1-9][0-9]* ;
+ID : [a-zA-Z~!@$%^&*_\-+=<>.?/][a-zA-Z0-9~!@$%^&*_\-+=<>.?/]* ;
+KW : ':'[a-zA-Z0-9~!@$%^&*_\-+=<>.?/]* ; 
