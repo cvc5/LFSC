@@ -20,7 +20,7 @@
 ; code to check resolutions
 
 (program append ((c1 clause) (c2 clause)) clause
-  (match c1 (cln c2) ((clc l c1') (clc l (append c1' c2)))))
+  (match c1 (cln c2) ((clc l cs) (clc l (append cs c2)))))
 
 ; we use marks as follows:
 ; -- mark 1 to record if we are supposed to remove a positive occurrence of the bvariable.
@@ -38,17 +38,17 @@
         ; if we were not supposed to be removing v when we began this call.
         ((pos v)
           (let m (ifmarked v tt (do (markbvar v) ff))
-          (let c' (simplify_clause c1)
+          (let cp (simplify_clause c1)
             (match m
-              (tt (do (ifmarked3 v v (type v)) c'))
-              (ff (do (ifmarked3 v (markvar3 v) v) (markbvar v) (clc l c')))))))
+              (tt (do (ifmarked3 v v (type v)) cp))
+              (ff (do (ifmarked3 v (markvar3 v) v) (markbvar v) (clc l cp)))))))
         ; the same as the code for tt, but using different marks.
         ((neg v)
           (let m (ifmarked2 v tt (do (markbvar2 v) ff))
-          (let c' (simplify_clause c1)
+          (let cp (simplify_clause c1)
             (match m
-              (tt (do (ifmarked4 v v (markbvar4 v)) c'))
-              (ff (do (ifmarked4 v (markbvar4 v) v) (markbvar2 v) (clc l c')))))))))
+              (tt (do (ifmarked4 v v (markbvar4 v)) cp))
+              (ff (do (ifmarked4 v (markbvar4 v) v) (markbvar2 v) (clc l cp)))))))))
     ((concat_cl c1 c2) (append (simplify_clause c1) (simplify_clause c2)))
     ((clr l c1)
       (match l
@@ -58,17 +58,17 @@
         ((pos v)
             (let m (ifmarked v tt (do (markbvar v) ff))
             (let m3 (ifmarked3 v (do (markvar3 v) tt) ff)
-            (let c' (simplify_clause c1)
+            (let cp (simplify_clause c1)
               (ifmarked3 v (do (match m3 (tt v) (ff (markvar3 v)))
-                                (match m (tt v) (ff (markbvar v))) c')
+                                (match m (tt v) (ff (markbvar v))) cp)
                           (fail clause))))))
         ; same as the tt case, but with different marks.
         ((neg v)
             (let m2 (ifmarked2 v tt (do (markbvar2 v) ff))
             (let m4 (ifmarked4 v (do (markbvar4 v) tt) ff)
-            (let c' (simplify_clause c1)
+            (let cp (simplify_clause c1)
               (ifmarked4 v (do (match m4 (tt v) (ff (markbvar4 v)))
-                                (match m2 (tt v) (ff (markbvar2 v))) c')
+                                (match m2 (tt v) (ff (markbvar2 v))) cp)
                           (fail clause))))))
    ))))
 

@@ -8,7 +8,8 @@
 
 (declare-type checked_mpz (mpz))
 
-(declare-rule check_eq_mqz (var x mpz) (var y mpz) (var b bool)
+(declare-rule check_eq_mqz 
+  (var x mpz) (var y mpz) (var b bool)
 
                  (provided (eq_mpz x y b) tt)
 ;--------------------------------------------                    

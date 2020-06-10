@@ -34,7 +34,7 @@
 (declare = (-> (var s sort) (term s) (term s) formula))
 
 ; alternative syntax, highlighting that s is a type parameter
-(declare ite (! s sort
+(declare ite (Forall s sort
                (-> formula (term s) (term s) (term s))))
 
 (declare let (-> (var s sort) (term s) (-> (term s) formula) formula))
@@ -91,7 +91,7 @@
 )
 
 ; CT
-; This is a strange rule. Why does it a premise? 
+; This is a strange rule. Why does it have a premise? 
 (declare-rule pred_refl_pos (var x1 (term Bool)) 
   
   (th_holds (p_app x1))
@@ -100,7 +100,7 @@
 )
 
 ; CT
-; Another is a strange rule. Why does it a premise? 
+; Another is a strange rule. Why does it have a premise? 
 (declare-rule pred_refl_neg (var x1 (term Bool))
 
   (th_holds (not (p_app x1)))
@@ -190,7 +190,7 @@
 ;; between SAT prop variable and BVSAT prop variable
 (declare-rule decl_bvatom (f formula)
 
-  (! v bvar (! bv_v bvar 
+  (Forall v bvar (Forall bv_v bvar 
     (-> (atom v f) 
         (atom bv_v f) 
         (bvatom v bv_v) 
