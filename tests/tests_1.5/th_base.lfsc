@@ -5,7 +5,7 @@
 ; Theory of Equality and Congruence Closure
 ;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Deps: smt.plf
+; Deps: smt.lfsc
 
 ; sorts :
 

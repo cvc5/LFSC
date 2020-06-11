@@ -1,4 +1,5 @@
-; Deps: smt.plf th_base.plf
+; Deps: smt.lfsc th_base.lfsc
+
 (declare forall (-> (var s sort) (term s) formula formula))
 
 ;This program recursively checks the instantiation.
