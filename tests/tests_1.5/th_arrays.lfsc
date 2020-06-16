@@ -10,13 +10,12 @@
 (declare Array (-> sort sort sort))
 
 ; functions
-(declare write (var I sort) (var V sort)
+(declare write (-> (var I sort) (var V sort)
   (term (arrow (Array I V) (arrow I (arrow V 
-          (Array I V))))))
+          (Array I V)))))))
 
-(declare read (var I sort) (V V sort)
-  (term (arrow (Array I V)
-          (arrow I V))))
+(declare read (-> (var I sort) (V V sort)
+  (term (arrow (Array I V) (arrow I V)))))
 
 ; inference rules
 

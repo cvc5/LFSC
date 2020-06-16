@@ -25,7 +25,7 @@ command
 // is equivalent to
 // (declare c (-> τ₁ ⋯ τᵢ type))
 //
-// (declare-type c ()) with i > 0
+// (declare-type c ())
 // is equivalent to
 // (declare c type)
 //
