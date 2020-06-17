@@ -1,0 +1,69 @@
+
+; Integer vectors 
+
+(declare bool type)
+(declare tt bool)
+(declare ff bool)
+
+(program mp_sub ((m mpz) (n mpz)) mpz (mp_add m (mp_neg n)))
+(program mp_lt ((m mpz) (n mpz)) bool (mp_ifneg (mp_sub m n) tt ff))
+
+
+(declare Ivec (! k mpz type))
+
+(declare nil (Ivec 0))
+
+(declare cons (! k mpz (! k1 mpz  
+  (!n mpz (! v (Ivec k) (!sc (^ (mp_add k 1) k1) (Ivec k1)))))))
+
+(declare conc (! k1 mpz (! k2 mpz (! k mpz
+  (! v1 (Ivec k1) (! v2 (Ivec k2) (!sc (^ (mp_add k1 k2) k) (Ivec k))))))))
+
+(declare first (! k mpz (! v (Ivec k) mpz)))
+
+(declare rest (! k mpz (! v (Ivec k) (Ivec k))))
+
+
+(program extr ((i mpz) (j mpz) (k mpz)) mpz 
+  (match (mp_lt j i)
+    (tt 0)
+    (ff (match (mp_lt k i)
+          (tt 0)
+          (ff (match (mp_lt k j)
+                (tt (mp_sub k i))
+                (ff (mp_sub j i))))))))
+
+(declare extract (! i mpz (! j mpz (! k mpz (! k1 mpz 
+  (! v (Ivec k) (! sc (^ (extr i j k) k1) (Ivec k1))))))))
+
+
+(declare v (Ivec (~ 1)))
+
+(check (: (Ivec 1)
+  (cons _ _ 4 nil)
+))
+
+(check (: (Ivec 2)
+  (conc _ _ _ (cons _ _ 10 nil) (cons _ _ 14 nil))
+))
+
+(check (: mpz
+  (first _ (rest _ (conc _ _ _ (cons _ _ 10 nil) (cons _ _ 14 nil))))
+))
+
+
+(declare v (Ivec 10)))
+
+(check (: (Ivec 4)
+  (extract 3 7 _ _ v)
+))
+
+(check (: (Ivec 0)
+  (extract 8 7 _ _ v)
+))
+
+(check (: (Ivec 7)
+  (extract 3 12 _ _ v)
+))
+
+
