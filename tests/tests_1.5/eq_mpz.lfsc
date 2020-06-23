@@ -17,4 +17,4 @@
 )
 
 (check
-  (has-proof (checked_mpz 5) (check_eq_mqz 5 5 tt)))
+  (proved-by (checked_mpz 5) (check_eq_mqz 5 5 tt)))

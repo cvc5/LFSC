@@ -123,7 +123,7 @@ term
 // Extensions ///////////////////
   | '(' 'lam' iden term ')'
   | '(' 'let' iden term term ')'
-  | '(' 'has-proof' type term ')'
+  | '(' 'proved-by' type term ')'
   | '(' 'assuming' vtype+ term ')'
   ;
 //////////////////////////////////
@@ -135,7 +135,7 @@ term
 // is equivalent to
 // (@ ξ t)
 //
-// (has-proof τ t)
+// (proved-by τ t)
 // is equivalent to
 // (: τ t)
 //
