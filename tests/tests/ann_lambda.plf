@@ -1,0 +1,38 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; SMT syntax and semantics (not theory-specific)
+;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; depends on sat.plf
+(declare sort type)
+(declare term type)
+; Type judgment: term t has sort 
+(declare has_type (! t term (! s sort type)))
+; Theory holds: term t holds, where t should have Boolean type
+(declare th_holds (! t term type))
+; sorts :
+(declare Bool sort)
+; function constructor
+(declare arrow (! s1 sort (! s2 sort sort)))
+; functions :
+(declare atom (! s sort term))
+(declare type_atom (! s sort (has_type (atom s) s)))
+; high-order apply
+(declare apply (! t1 term (! t2 term term)))
+; fail means not well typed
+(program type_check ((t term)) sort  
+  ; TODO (recursive)
+  Bool
+)
+(declare f_=  term)
+(define = (# t1 term (# t2 term (apply (apply f_= t1) t2)))) ; needs macro
+;(declare = (! t1 term (! t2 term term)))
+(declare cong (! a1 term
+              (! b1 term
+              (! a2 term
+              (! b2 term
+              (! u1 (th_holds (= a1 b1))
+              (! u2 (th_holds (= a2 b2))
+              (! s sort
+              (! v1 (^ (type_check (apply a1 a2)) s)
+                (th_holds (= (apply a1 a2) (apply b1 b2))))))))))))

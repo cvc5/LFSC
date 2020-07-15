@@ -219,6 +219,63 @@ start_check:
             return 0;
           }
         }
+        case '#':
+        {
+          // Annotated lambda case
+          string id(prefix_id());
+#ifdef DEBUG_SYM_NAMES
+          Expr *sym = new SymSExpr(id, SYMS_EXPR);
+#else
+          Expr *sym = new SymExpr(id);
+#endif
+          allow_run = true;
+          int prevo = open_parens;
+          Expr *domain = check(true, statType);
+          eat_excess(prevo);
+          allow_run = false;
+          pair<Expr *, Expr *> prev =
+              symbols->insert(id.c_str(), pair<Expr *, Expr *>(sym, domain));
+          Expr* rec_expected = nullptr;
+          if (expected)
+          {
+            expected->inc();
+            if (expected->followDefs()->getop() != PI)
+              report_error(
+                  string("The expected classifier for a # (annotated lambda) abstraction")
+                  + string("is not a pi")
+                  + string("1. the expected classifier: ")
+                  + expected->toString());
+            CExpr* cexpected = static_cast<CExpr*>(expected->followDefs());
+            if (!cexpected->kids[1]->defeq(domain)) {
+              report_error(
+                  string("The expected domain for a # (annotated lambda) abstraction ")
+                  + string("should be: ") + cexpected->kids[1]->toString()
+                  + string("\n, but is: ") + domain->toString());
+            }
+            rec_expected = cexpected->kids[2];
+          }
+          Expr* rec_computed = nullptr;
+          Expr* range =
+              check(create, rec_expected, &rec_computed, NULL, return_pos);
+          if (expected)
+          {
+            expected->dec();
+          }
+          eat_excess(prevo);
+          eat_rparen();
+          CExpr *tmp = new CExpr(PI, sym, domain, rec_computed);
+          tmp->calc_free_in();
+          *computed = static_cast<Expr*>(tmp);
+
+          symbols->insert(id.c_str(), prev);
+          if (create)
+          {
+            CExpr *ret = new CExpr(PI, sym, domain, range);
+            ret->calc_free_in();
+            return ret;
+          }
+          return 0;
+        }
         case '%':
         {  // the case for big lambda
           if (expected || create || !return_pos || !big_check)
