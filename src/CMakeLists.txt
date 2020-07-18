@@ -7,9 +7,11 @@ set(srcfiles
     print_smt2.cpp
     scccode.cpp
     sccwriter.cpp
-    trie.cpp)
+    trie.cpp
+    token.cpp)
 
-add_library (objlib OBJECT ${srcfiles})
+flex_target(Lexer lexer.flex  ${CMAKE_CURRENT_BINARY_DIR}/lexer.cpp)
+add_library (objlib OBJECT ${srcfiles} ${FLEX_Lexer_OUTPUTS})
 set_property (TARGET objlib PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 add_executable (lfscc $<TARGET_OBJECTS:objlib> main.cpp)

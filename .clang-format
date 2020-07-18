@@ -12,6 +12,7 @@ BraceWrapping:
   AfterFunction: true
   AfterStruct: true
   AfterUnion: true
+  AfterCaseLabel: true
   BeforeCatch: true
   BeforeElse: true
 BreakBeforeBraces: Custom

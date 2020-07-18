@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 #include "code.h"
 #include "expr.h"
@@ -15,6 +16,7 @@
 #include <string.h>
 #include <time.h>
 #include <stack>
+#include <utility>
 #include "print_smt2.h"
 #include "scccode.h"
 
@@ -22,11 +24,6 @@ using namespace std;
 #ifndef _MSC_VER
 using namespace __gnu_cxx;
 #endif
-
-int linenum = 1;
-int colnum = 1;
-const char *filename = 0;
-std::istream* curfile = 0;
 
 symmap2 progs;
 std::vector<Expr *> ascHoles;
@@ -38,32 +35,8 @@ std::map<SymExpr *, int> mark_map;
 std::vector<std::pair<std::string, std::pair<Expr *, Expr *> > >
     local_sym_names;
 
-Expr *not_defeq1 = 0;
-Expr *not_defeq2 = 0;
-
 bool tail_calls = true;
 bool big_check = true;
-
-void report_error(const string &msg)
-{
-  if (filename)
-  {
-    Position p(filename, linenum, colnum);
-    p.print(cerr);
-  }
-  cerr << "\n";
-  cerr << msg;
-  cerr << "\n";
-  if (not_defeq1 && not_defeq2)
-  {
-    cerr << "The following terms are not definitionally equal:\n1. ";
-    not_defeq1->print(cerr);
-    cerr << "\n2. ";
-    not_defeq2->print(cerr);
-  }
-  cerr.flush();
-  exit(1);
-}
 
 Expr *call_run_code(Expr *code)
 {
@@ -86,11 +59,6 @@ Expr *call_run_code(Expr *code)
   return computed_result;
 }
 
-char our_getc_c = 0;
-
-int IDBUF_LEN = 2048;
-char idbuf[2048];
-
 Expr *statType = new CExpr(TYPE);
 Expr *statKind = new CExpr(KIND);
 Expr *statMpz = new CExpr(MPZ);
@@ -101,7 +69,7 @@ int open_parens = 0;
 // only call in check()
 void eat_rparen()
 {
-  eat_char(')');
+  eat_token(Token::Close);
   open_parens--;
 }
 
@@ -147,22 +115,21 @@ start_check:
   // if( expected )
   //  expected->print( std::cout );
   // std::cout << std::endl;
-  char d = non_ws();
-  switch (d)
+  switch (next_token())
   {
-    case '(':
+    case Token::Open:
     {
       open_parens++;
 
-      char c = non_ws();
+      Token::Token c = next_token();
       switch (c)
       {
-        case std::istream::traits_type::eof():
+        case Token::Eof:
         {
           report_error("Unexpected end of file.");
           break;
         }
-        case '!':
+        case Token::Bang:
         {  // the pi case
           string id(prefix_id());
 #ifdef DEBUG_SYM_NAMES
@@ -219,7 +186,7 @@ start_check:
             return 0;
           }
         }
-        case '#':
+        case Token::Pound:
         {
           // Annotated lambda case
           string id(prefix_id());
@@ -276,7 +243,7 @@ start_check:
           }
           return 0;
         }
-        case '%':
+        case Token::Percent:
         {  // the case for big lambda
           if (expected || create || !return_pos || !big_check)
             report_error(string("Big lambda abstractions can only be used")
@@ -317,7 +284,7 @@ start_check:
           goto start_check;
         }
 
-        case '\\':
+        case Token::ReverseSolidus:
         {  // the lambda case
           if (!expected)
             report_error(string("We are computing a type for a lambda ")
@@ -408,7 +375,7 @@ start_check:
             return 0;
           }
         }
-        case '^':
+        case Token::Caret:
         {  // the run case
           if (!allow_run || !create || !expected)
             report_error(string("A run expression (operator \"^\") appears in")
@@ -478,7 +445,7 @@ start_check:
           return new CExpr(RUN, code, trm);
         }
 
-        case ':':
+        case Token::Colon:
         {  // the ascription case
           statType->inc();
           int prev = open_parens;
@@ -512,7 +479,7 @@ start_check:
             return 0;
           }
         }
-        case '@':
+        case Token::At:
         {  // the local definition case
           string id(prefix_id());
 #ifdef DEBUG_SYM_NAMES
@@ -554,7 +521,7 @@ start_check:
             return body;
           }
         }
-        case '~':
+        case Token::Tilde:
         {
           int prev = open_parens;
           Expr *e = check(create, expected, computed, is_hole, return_pos);
@@ -601,7 +568,7 @@ start_check:
         }
         default:
         {  // the application case
-          our_ungetc(c);
+          reinsert_token(c);
           Expr *head_computed;
           int prev = open_parens;
           Expr *headtrm = check(create, 0, &head_computed);
@@ -625,11 +592,11 @@ start_check:
           cout << tmp << "{ headtp = ";
           headtp->debug();
 #endif
-          char c;
+          Token::Token c;
           vector<HoleExpr *> holes;
-          while ((c = non_ws()) != ')')
+          while ((c = next_token()) != Token::Close)
           {
-            our_ungetc(c);
+            reinsert_token(c);
             if (headtp->getop() != PI)
               report_error(
                   string("The type of an applied term is not ")
@@ -849,97 +816,82 @@ start_check:
         }  // end application case
       }
     }
-    case std::istream::traits_type::eof():
+    case Token::Eof:
     {
       report_error("Unexpected end of file.");
       break;
     }
 
-    case '_':
+    case Token::Hole:
+    {
       if (!is_hole)
         report_error("A hole is being used in a disallowed position.");
       *is_hole = true;
       if (expected) expected->dec();
       return new HoleExpr();
-    case '0':
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-    case '7':
-    case '8':
-    case '9':
+    }
+    case Token::Natural:
     {
-      our_ungetc(d);
-      string v;
-      char c;
-      while (isdigit(c = our_getc())) v.push_back(c);
-      bool parseMpq = false;
-      string v2;
-      if (c == '/')
-      {
-        parseMpq = true;
-        v.push_back(c);
-        while (isdigit(c = our_getc())) v.push_back(c);
-      }
-      our_ungetc(c);
-
-      Expr *i = 0;
-      if (create)
-      {
-        if (parseMpq)
-        {
-          mpq_t num;
-          mpq_init(num);
-          if (mpq_set_str(num, v.c_str(), 10) == -1)
-            report_error("Error reading a numeral.");
-          i = new RatExpr(num);
-        }
-        else
-        {
-          mpz_t num;
-          if (mpz_init_set_str(num, v.c_str(), 10) == -1)
-            report_error("Error reading a numeral.");
-          i = new IntExpr(num);
-        }
-      }
-
       if (expected)
       {
-        if ((!parseMpq && expected != statMpz)
-            || (parseMpq && expected != statMpq))
-          report_error(string("We parsed a numeric literal, but were ")
+        if (expected != statMpz)
+          report_error(string("We parsed an integer, but were ")
                        + string("expecting a term of a different type.\n")
                        + string("1. the expected type: ")
                        + expected->toString());
         expected->dec();
-        if (create) return i;
-        return 0;
       }
       else
       {
-        if (parseMpq)
-        {
-          statMpq->inc();
-          *computed = statMpq;
-          if (create) return i;
-          return statMpq;
-        }
-        else
-        {
-          statMpz->inc();
-          *computed = statMpz;
-          if (create) return i;
-          return statMpz;
-        }
+        statMpz->inc();
+        *computed = statMpz;
+      }
+      if (create)
+      {
+        mpz_t num;
+        if (mpz_init_set_str(num, s_lexer->YYText(), 10) == -1)
+          report_error("Error reading a numeral.");
+        return new IntExpr(num);
+      }
+      else
+      {
+        return nullptr;
       }
     }
+    case Token::Rational:
+    {
+      if (expected)
+      {
+        if (expected != statMpq)
+          report_error(string("We parsed a rational, but were ")
+                       + string("expecting a term of a different type.\n")
+                       + string("1. the expected type: ")
+                       + expected->toString());
+        expected->dec();
+      }
+      else
+      {
+        statMpq->inc();
+        *computed = statMpq;
+      }
+      if (create)
+      {
+        mpq_t num;
+        mpq_init(num);
+        if (mpq_set_str(num, s_lexer->YYText(), 10) == -1)
+          report_error("Error reading a numeral.");
+        return new RatExpr(num);
+      }
+      else
+      {
+        return nullptr;
+      }
+    }
+    // NB: We could match on identifiers, but by not doing that, we allow
+    // (contextual) keyword identifiers
     default:
     {
-      our_ungetc(d);
-      string id(prefix_id());
+      string id(s_lexer->YYText());
       pair<Expr *, Expr *> p = symbols->get(id.c_str());
       Expr *ret = p.first;
       Expr *rettp = p.second;
@@ -1004,138 +956,72 @@ void check_file(std::istream& in,
                 sccwriter* scw,
                 libwriter* lw)
 {
-  int prev_linenum = linenum;
-  int prev_colnum = colnum;
-  const char *prev_filename = filename;
-  std::istream* prev_curfile = curfile;
-
   // from code.h
   dbg_prog = a.show_runs;
   run_scc = a.run_scc;
   tail_calls = !a.no_tail_calls;
 
-  std::string f;
-  if (_filename == "stdin")
+  s_lexer = new yyFlexLexer(&in);
+  s_filename = _filename;
+
+  Token::Token c;
+  while ((c = next_token()) != Token::Eof)
   {
-    curfile = &std::cin;
-    f = _filename;
-  }
-  else
-  {
-    if (prev_curfile)
+    if (c == Token::Open)
     {
-      f = std::string(prev_filename);
-#ifdef _MSC_VER
-      std::string str(f);
-      for (int n = str.length(); n >= 0; n--)
+      c = next_token();
+      switch (c)
       {
-        if (str[n] == '\\' || str[n] == '/')
+        case Token::Define:
         {
-          str = str.erase(n, str.length() - n);
+          string id(prefix_id());
+          Expr* ttp;
+          int prevo = open_parens;
+          Expr* t = check(true, 0, &ttp, NULL, true);
+          eat_excess(prevo);
+
+          int o = ttp->followDefs()->getop();
+          if (o == KIND)
+            report_error(string("Kind-level definitions are not supported.\n"));
+          SymSExpr* s = new SymSExpr(id);
+          s->val = t;
+          pair<Expr*, Expr*> prev =
+              symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, ttp));
+          if (prev.first) prev.first->dec();
+          if (prev.second) prev.second->dec();
           break;
         }
-      }
-      char *tmp = (char *)str.c_str();
-#else
-      // Note: dirname may modify its argument, so we create a non-const copy.
-      char *f_copy = strdup(f.c_str());
-      std::string str = std::string(dirname(f_copy));
-      free(f_copy);
-#endif
-      f = str + std::string("/") + filename;
-    }
-    else
-    {
-      f = _filename;
-    }
-    curfile = &in;
-  }
-
-  linenum = 1;
-  colnum = 1;
-  filename = f.c_str();
-
-  char c;
-  while ((c = non_ws()) && c != std::istream::traits_type::eof())
-  {
-    if (c == '(')
-    {
-      char d;
-      switch ((d = non_ws()))
-      {
-        case 'd':
-          char b;
-          if ((b = our_getc()) != 'e')
-            report_error(string("Unexpected start of command."));
-
-          switch ((b = our_getc()))
-          {
-            case 'f':
-            {  // expecting "define"
-
-              if (our_getc() != 'i' || our_getc() != 'n' || our_getc() != 'e')
-                report_error(string("Unexpected start of command."));
-
-              string id(prefix_id());
-              Expr *ttp;
-              int prevo = open_parens;
-              Expr *t = check(true, 0, &ttp, NULL, true);
-              eat_excess(prevo);
-
-              int o = ttp->followDefs()->getop();
-              if (o == KIND)
-                report_error(
-                    string("Kind-level definitions are not supported.\n"));
-              SymSExpr *s = new SymSExpr(id);
-              s->val = t;
-              pair<Expr *, Expr *> prev =
-                  symbols->insert(id.c_str(), pair<Expr *, Expr *>(s, ttp));
-              if (prev.first) prev.first->dec();
-              if (prev.second) prev.second->dec();
-              break;
-            }
-            case 'c':
-            {  // expecting "declare"
-              if (our_getc() != 'l' || our_getc() != 'a' || our_getc() != 'r'
-                  || our_getc() != 'e')
-                report_error(string("Unexpected start of command."));
-
-              string id(prefix_id());
-              Expr *ttp;
-              int prevo = open_parens;
-              Expr *t = check(true, 0, &ttp, NULL, true);
-              eat_excess(prevo);
-
-              ttp = ttp->followDefs();
-              if (ttp->getop() != TYPE && ttp->getop() != KIND)
-                report_error(
-                    string("The expression declared for \"") + id
-                    + string("\" is neither\na type nor a kind.\n")
-                    + string("1. The expression: ") + t->toString()
-                    + string("\n2. Its classifier (should be \"type\" ")
-                    + string("or \"kind\"): ") + ttp->toString());
-              ttp->dec();
-              SymSExpr *s = new SymSExpr(id);
-              pair<Expr *, Expr *> prev =
-                  symbols->insert(id.c_str(), pair<Expr *, Expr *>(s, t));
-              if (lw) lw->add_symbol(s, t);
-              if (prev.first) prev.first->dec();
-              if (prev.second) prev.second->dec();
-              break;
-            }
-            default: report_error(string("Unexpected start of command."));
-          }  // switch((b = our_getc())) following "de"
-          break;
-        case 'c':
+        case Token::Declare:
         {
-          if (our_getc() != 'h' || our_getc() != 'e' || our_getc() != 'c'
-              || our_getc() != 'k')
-            report_error(string("Unexpected start of command."));
+          string id(prefix_id());
+          Expr* ttp;
+          int prevo = open_parens;
+          Expr* t = check(true, 0, &ttp, NULL, true);
+          eat_excess(prevo);
+
+          ttp = ttp->followDefs();
+          if (ttp->getop() != TYPE && ttp->getop() != KIND)
+            report_error(string("The expression declared for \"") + id
+                         + string("\" is neither\na type nor a kind.\n")
+                         + string("1. The expression: ") + t->toString()
+                         + string("\n2. Its classifier (should be \"type\" ")
+                         + string("or \"kind\"): ") + ttp->toString());
+          ttp->dec();
+          SymSExpr* s = new SymSExpr(id);
+          pair<Expr*, Expr*> prev =
+              symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, t));
+          if (lw) lw->add_symbol(s, t);
+          if (prev.first) prev.first->dec();
+          if (prev.second) prev.second->dec();
+          break;
+        }
+        case Token::Check:
+        {
           if (run_scc)
           {
             init_compiled_scc();
           }
-          Expr *computed;
+          Expr* computed;
           big_check = true;
           int prev = open_parens;
           (void)check(false, 0, &computed, NULL, true);
@@ -1169,14 +1055,10 @@ void check_file(std::istream& in,
           // exit(0);
           break;
         }
-        case 'o':
-        {  // opaque case
-          if (our_getc() != 'p' || our_getc() != 'a' || our_getc() != 'q'
-              || our_getc() != 'u' || our_getc() != 'e')
-            report_error(string("Unexpected start of command."));
-
+        case Token::Opaque:
+        {
           string id(prefix_id());
-          Expr *ttp;
+          Expr* ttp;
           int prevo = open_parens;
           (void)check(false, 0, &ttp, NULL, true);
           eat_excess(prevo);
@@ -1184,22 +1066,20 @@ void check_file(std::istream& in,
           int o = ttp->followDefs()->getop();
           if (o == KIND)
             report_error(string("Kind-level definitions are not supported.\n"));
-          SymSExpr *s = new SymSExpr(id);
-          pair<Expr *, Expr *> prev =
-              symbols->insert(id.c_str(), pair<Expr *, Expr *>(s, ttp));
+          SymSExpr* s = new SymSExpr(id);
+          pair<Expr*, Expr*> prev =
+              symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, ttp));
           if (prev.first) prev.first->dec();
           if (prev.second) prev.second->dec();
           break;
         }
-        case 'r':
-        {  // run case
-          if (our_getc() != 'u' || our_getc() != 'n')
-            report_error(string("Unexpected start of command."));
-          Expr *code = read_code();
+        case Token::Run:
+        {
+          Expr* code = read_code();
           check_code(code);
           cout << "[Running-sc ";
           code->print(cout);
-          Expr *tmp = run_code(code);
+          Expr* tmp = run_code(code);
           cout << "] = \n";
           if (tmp)
           {
@@ -1212,27 +1092,23 @@ void check_file(std::istream& in,
           code->dec();
           break;
         }
-        case 'p':
-        {  // program case
-          if (our_getc() != 'r' || our_getc() != 'o' || our_getc() != 'g'
-              || our_getc() != 'r' || our_getc() != 'a' || our_getc() != 'm')
-            report_error(string("Unexpected start of command."));
-
+        case Token::Program:
+        {
           string progstr(prefix_id());
-          SymSExpr *prog = new SymSExpr(progstr);
+          SymSExpr* prog = new SymSExpr(progstr);
           if (progs.find(progstr) != progs.end())
             report_error(string("Redeclaring program ") + progstr
                          + string("."));
           progs[progstr] = prog;
-          eat_char('(');
-          char d;
-          vector<Expr *> vars;
-          vector<Expr *> tps;
-          Expr *tmp;
-          while ((d = non_ws()) != ')')
+          eat_token(Token::Open);
+          Token::Token d;
+          vector<Expr*> vars;
+          vector<Expr*> tps;
+          Expr* tmp;
+          while ((d = next_token()) != Token::Close)
           {
-            our_ungetc(d);
-            eat_char('(');
+            reinsert_token(d);
+            eat_token(Token::Open);
             string varstr = prefix_id();
             if (symbols->get(varstr.c_str()).first != NULL)
             {
@@ -1240,11 +1116,11 @@ void check_file(std::istream& in,
                            + string(" (as a constant).\n1. The variable: ")
                            + varstr);
             }
-            Expr *var = new SymSExpr(varstr);
+            Expr* var = new SymSExpr(varstr);
             vars.push_back(var);
             statType->inc();
             int prev = open_parens;
-            Expr *tp = check(true, NULL, &tmp, 0, true);
+            Expr* tp = check(true, NULL, &tmp, 0, true);
             Expr* kind = compute_kind(tp);
             if (kind != statType && !tp->isDatatype())
             {
@@ -1258,9 +1134,9 @@ void check_file(std::istream& in,
             eat_excess(prev);
 
             tps.push_back(tp);
-            eat_char(')');
+            eat_token(Token::Close);
 
-            symbols->insert(varstr.c_str(), pair<Expr *, Expr *>(var, tp));
+            symbols->insert(varstr.c_str(), pair<Expr*, Expr*>(var, tp));
           }
 
           if (!vars.size()) report_error("A program lacks input variables.");
@@ -1281,7 +1157,7 @@ void check_file(std::istream& in,
                 + (kind == nullptr ? string("none") : kind->toString()));
           }
 
-          Expr *progcode = read_code();
+          Expr* progcode = read_code();
 
           // now, construct the type of the program
           Expr* progtp = progtpret;
@@ -1315,16 +1191,16 @@ void check_file(std::istream& in,
           {
             if (scw)
             {
-              scw->add_scc(progstr, (CExpr *)progcode);
+              scw->add_scc(progstr, (CExpr*)progcode);
             }
           }
 
           // remove the variables from the symbol table.
           for (int i = 0, iend = vars.size(); i < iend; i++)
           {
-            string &s = ((SymSExpr *)vars[i])->s;
+            string& s = ((SymSExpr*)vars[i])->s;
 
-            symbols->insert(s.c_str(), pair<Expr *, Expr *>(NULL, NULL));
+            symbols->insert(s.c_str(), pair<Expr*, Expr*>(NULL, NULL));
           }
 
           progtp->inc();
@@ -1334,29 +1210,29 @@ void check_file(std::istream& in,
 
           break;
         }
-
-        default: report_error(string("Unexpected start of command."));
-      }  // switch((d = non_ws())
-
-      eat_char(')');
-    }  // while
-    else
-    {
-      if (c != ')')
-      {
-        char c2[2];
-        c2[1] = 0;
-        c2[0] = c;
-        string syn = string("Bad syntax (mismatched parentheses?): ");
-        syn.append(string(c2));
-        report_error(syn);
+        default:
+        {
+          unexpected_token_error(c,
+                                 "Acceptable top-level commands are:"
+                                 "\n\tdeclare"
+                                 "\n\tdefine"
+                                 "\n\topaque"
+                                 "\n\trun"
+                                 "\n\tcheck"
+                                 "\n\tprogram");
+          break;
+        }
       }
     }
+    else if (c == Token::Close)
+    {
+      // Okay
+    }
+    else
+    {
+      unexpected_token_error(c, "Top-level commands must start with parentheses");
+    }
   }
-  linenum = prev_linenum;
-  colnum = prev_colnum;
-  filename = prev_filename;
-  curfile = prev_curfile;
 }
 
 class Deref : public Trie<pair<Expr *, Expr *> >::Cleaner
@@ -1418,11 +1294,13 @@ Expr* compute_kind(Expr* e)
   e = e->followDefs();
   switch (e->getclass())
   {
-    case CEXPR: {
+    case CEXPR:
+    {
       CExpr* ce = static_cast<CExpr*>(e);
       switch (e->getop())
       {
-        case APP: {
+        case APP:
+        {
           Expr* head = compute_kind(ce->kids[0]);
           std::vector<std::pair<SymExpr*, Expr*>> prev_pi_vars_and_values;
           size_t next_kid_i = 1;
@@ -1454,16 +1332,19 @@ Expr* compute_kind(Expr* e)
           return head;
         }
         case MPQ:
-        case MPZ: {
+        case MPZ:
+        {
           return statType;
         }
-        default: {
+        default:
+        {
           return e;
         }
       }
     }
     case SYMS_EXPR:
-    case SYM_EXPR: {
+    case SYM_EXPR:
+    {
       Expr* reference = e->followDefs();
       if (reference->getclass() == SYMS_EXPR)
       {
@@ -1477,14 +1358,17 @@ Expr* compute_kind(Expr* e)
       return reference;
     }
     case RAT_EXPR:
-    case INT_EXPR: {
+    case INT_EXPR:
+    {
       return e;
     }
-    case HOLE_EXPR: {
+    case HOLE_EXPR:
+    {
       report_error("Hole expression have no kind.");
       return nullptr;  // unreachable
     }
-    default: {
+    default:
+    {
       report_error("Unknown expression class in compute_kind()");
       return nullptr;  // unreachable
     }
@@ -1493,8 +1377,8 @@ Expr* compute_kind(Expr* e)
 
 void init()
 {
-  symbols->insert("type", pair<Expr *, Expr *>(statType, statKind));
+  symbols->insert("type", pair<Expr*, Expr*>(statType, statKind));
   statType->inc();
-  symbols->insert("mpz", pair<Expr *, Expr *>(statMpz, statType));
-  symbols->insert("mpq", pair<Expr *, Expr *>(statMpq, statType));
+  symbols->insert("mpz", pair<Expr*, Expr*>(statMpz, statType));
+  symbols->insert("mpq", pair<Expr*, Expr*>(statMpq, statType));
 }
