@@ -7,7 +7,6 @@
 #include "code.h"
 #include "expr.h"
 #include "libwriter.h"
-#include "position.h"
 #include "sccwriter.h"
 #include "trie.h"
 #ifndef _MSC_VER
@@ -963,6 +962,7 @@ void check_file(std::istream& in,
 
   s_lexer = new yyFlexLexer(&in);
   s_filename = _filename;
+  init_s_span();
 
   Token::Token c;
   while ((c = next_token()) != Token::Eof)

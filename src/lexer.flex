@@ -2,19 +2,20 @@
 
 %option noyywrap
 %option nounput
-%option yylineno
 %option full
 %option c++
 
 %{
 #include "lexer.h"
-#include "position.h"
 #include <sstream>
 #include <cassert>
 #include <iostream>
+#define YY_USER_ACTION add_columns(yyleng);
+
 %}
 
-ws          [ \n\t\f]+
+nl          [\n]+
+ws          [ \t\f]+
 dig         [0-9]
 markvar     markvar{dig}*
 ifmarked    ifmarked{dig}*
@@ -24,6 +25,10 @@ ident       [^0-9^\\~:@!%() \t\n\f;][^() \t\n\f;]*
 comment     ;[^\n]*\n
 
 %%
+
+%{
+    bump_span();
+%}
 
 "declare"       return Token::Declare;
 "define"        return Token::Define;
@@ -68,8 +73,8 @@ comment     ;[^\n]*\n
 {ifmarked}      return Token::IfMarked;
 {natural}       return Token::Natural;
 {rational}      return Token::Rational;
-{ws}            /* skip blanks and tabs */
-{comment}       /* skip comments */
+{ws}            bump_span();
+{nl}            add_lines(yyleng); bump_span();
 
 
 ";"    {
@@ -77,8 +82,11 @@ comment     ;[^\n]*\n
 
         while((c = yyinput()) != 0)
             {
-            if(c == '\n')
+            if(c == '\n') {
+                add_lines(1);
+                bump_span();
                 break;
+            }
             }
         }
 
@@ -91,6 +99,7 @@ std::string s_filename{};
 // Currrent lexer
 FlexLexer* s_lexer = nullptr;
 Token::Token s_peeked = Token::TokenErr;
+Span s_span = {1,1,1,1};
 
 void reinsert_token(Token::Token t)
 {
@@ -117,13 +126,9 @@ void report_error(const std::string &msg)
 {
   if (s_filename.length())
   {
-    Position p(s_filename.c_str(), s_lexer ? s_lexer->lineno() : 0, 0);
-    p.print(std::cerr);
+    std::cerr << "Error: " << s_filename << " at " << s_span;
   }
-  std::cerr << "\n";
-  std::cerr << msg;
-  std::cerr << "\n";
-  std::cerr.flush();
+  std::cerr << std::endl << msg << std::endl;
   exit(1);
 }
 
@@ -132,14 +137,13 @@ void unexpected_token_error(Token::Token t, const std::string& info)
   std::ostringstream o{};
   o << "Scanned token " << t << ", `" << s_lexer->YYText() << "`, which is invalid in this position";
   if (info.length()) {
-    o << std::endl << "Info: " << info;
+    o << std::endl << "Note: " << info;
   }
   report_error(o.str());
 }
 
 std::string prefix_id() {
   next_token();
-  //eat_token(Token::Ident);
   return s_lexer->YYText();
 }
 
@@ -151,4 +155,35 @@ void eat_token(Token::Token t)
     o << "Expected a " << t << ", but got a " << tt << ", `" << s_lexer->YYText() << "`";
     unexpected_token_error(tt, o.str());
   }
+}
+
+
+void init_s_span()
+{
+    s_span.start.line = 1;
+    s_span.start.column = 1;
+    s_span.end.line = 1;
+    s_span.end.column = 1;
+}
+void bump_span()
+{
+    s_span.start.line = s_span.end.line;
+    s_span.start.column = s_span.end.column;
+}
+void add_columns(uint32_t columns)
+{
+    s_span.end.column += columns;
+}
+void add_lines(uint32_t lines)
+{
+    s_span.end.line += lines;
+    s_span.end.column = 1;
+}
+std::ostream& operator<<(std::ostream& o, const Location& l)
+{
+    return o << l.line << ":" << l.column;
+}
+std::ostream& operator<<(std::ostream& o, const Span& l)
+{
+    return o << l.start << "-" << l.end;
 }
