@@ -105,12 +105,11 @@ def main():
     cmd = [configuration.lfscc] + configuration.dep_graph.getPathsInOrder()
     print('Command: ', cmd)
     result = subprocess.Popen(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-    code = result.wait()
-    if 0 != code:
-        stdout = result.stdout.read()
+    (stdout, _) = result.communicate()
+    if 0 != result.returncode:
         if stdout:
             print(stdout.decode())
-    return code
+    return result.returncode
 
 if __name__ == '__main__':
     sys.exit(main())
