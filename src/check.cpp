@@ -1212,14 +1212,18 @@ void check_file(std::istream& in,
         }
         default:
         {
-          unexpected_token_error(c,
-                                 "Acceptable top-level commands are:"
-                                 "\n\tdeclare"
-                                 "\n\tdefine"
-                                 "\n\topaque"
-                                 "\n\trun"
-                                 "\n\tcheck"
-                                 "\n\tprogram");
+          stringstream msg;
+          msg << "Acceptable top-level commands are:";
+          for (const auto& t : {Token::Declare,
+                                Token::Define,
+                                Token::Opaque,
+                                Token::Run,
+                                Token::Check,
+                                Token::Program})
+          {
+            msg << "\n\t" << t;
+          }
+          unexpected_token_error(c, msg.str());
           break;
         }
       }
