@@ -3,6 +3,7 @@
 #include <cstddef>
 #include "check.h"
 #include "expr.h"
+#include "token.h"
 #include "libwriter.h"
 #include "sccwriter.h"
 

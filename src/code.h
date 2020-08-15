@@ -7,8 +7,6 @@ Expr *read_code();
 Expr *check_code(Expr *);  // compute the type for the given code
 Expr *run_code(Expr *);
 
-int read_index();
-
 extern bool dbg_prog;
 extern bool run_scc;
 

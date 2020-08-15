@@ -31,6 +31,8 @@ else()
   message(FATAL_ERROR "Invalid build type '${CMAKE_BUILD_TYPE}'")
 endif()
 
+find_package(FLEX REQUIRED)
+
 enable_testing()
 
 include_directories(src)

@@ -26,6 +26,7 @@
 )
 (declare f_=  term)
 (define = (# t1 term (# t2 term (apply (apply f_= t1) t2)))) ; needs macro
+(define =2 (: (! t1 term (! t2 term term)) (\ t1 (\ t2 (apply (apply f_= t1) t2))))) ; needs macro
 ;(declare = (! t1 term (! t2 term term)))
 (declare cong (! a1 term
               (! b1 term

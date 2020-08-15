@@ -2,42 +2,12 @@
 #include <cstddef>
 #include <string>
 #include "check.h"
+#include "token.h"
+#include "lexer.h"
 
 #include "scccode.h"
 
 using namespace std;
-
-// Tries to pull `str` out of the character stream
-// If it fails, returns an (owned) string representing what was pulled from the
-// string, a prefix of `str`.
-// If it succeeds, returns null.
-//
-// If `check_end` is set, verifies that the word ends after what was parsed.
-string *eat_str(const char *str, bool check_end = true)
-{
-  string *s = new string();
-  char c, d;
-  while ((c = *str++))
-  {
-    d = our_getc();
-    if (c != d)
-    {
-      our_ungetc(d);
-      return s;
-    }
-    s->push_back(d);
-  }
-
-  if (check_end && (d = our_getc()) != ' ' && d != '(' && d != '\n'
-      && d != '\t')
-  {
-    our_ungetc(d);
-    return s;
-  }
-
-  delete s;
-  return 0;
-}
 
 // Returns null on "default"
 SymSExpr *read_ctor()
@@ -65,23 +35,23 @@ SymSExpr *read_ctor()
 
 Expr *read_case()
 {
-  eat_char('(');
+  eat_token(Token::Open);
   Expr *pat = NULL;
   vector<SymSExpr *> vars;
 
   vector<pair<Expr *, Expr *> > prevs;
-  char d = non_ws();
+  Token::Token d = next_token();
   switch (d)
   {
-    case '(':
+    case Token::Open:
     {
       // parse application
       SymSExpr *s = read_ctor();
       pat = s;
-      char c;
-      while ((c = non_ws()) != ')')
+      Token::Token c;
+      while ((c = next_token()) != Token::Close)
       {
-        our_ungetc(c);
+        reinsert_token(c);
         string varstr(prefix_id());
         // To avoid non-termination in the case that the user has provided an
         // illegal identifier here (such as a nested match pattern), we check
@@ -105,10 +75,14 @@ Expr *read_case()
       }
       break;
     }
-    case EOF: report_error("Unexpected end of file parsing a pattern."); break;
+    case Token::Eof:
+    {
+      report_error("Unexpected end of file parsing a pattern.");
+      break;
+    }
     default:
       // could be an identifier or "default"
-      our_ungetc(d);
+      reinsert_token(d);
       pat = read_ctor();
       break;
   }
@@ -122,43 +96,35 @@ Expr *read_case()
     symbols->insert(s.c_str(), prevs[i]);
   }
 
-  eat_char(')');
+  eat_token(Token::Close);
 
   return ret;
 }
 
 Expr *read_code()
 {
-  string *pref = NULL;
-  char d = non_ws();
+  Token::Token d = next_token();
   switch (d)
   {
-    case '(':
+    case Token::Open:
     {
-      char c = non_ws();
+      Token::Token c = next_token();
       switch (c)
       {
-        case 'd':
+        case Token::Do:
         {
-          our_ungetc('d');
-          pref = eat_str("do");
-          if (pref) break;
-          Expr *ret = read_code();
-          while ((c = non_ws()) != ')')
+          Expr* ret = read_code();
+          while ((c = next_token()) != Token::Close)
           {
-            our_ungetc(c);
+            reinsert_token(c);
             ret = new CExpr(DO, ret, read_code());
           }
           return ret;
         }
-        case 'f':
+        case Token::Fail:
         {
-          our_ungetc('f');
-          pref = eat_str("fail");
-          if (pref) break;
-
-          Expr *c = read_code();
-          eat_char(')');
+          Expr* c = read_code();
+          eat_token(Token::Close);
 
           // do we need to check this???
           // if (c->getclass() != SYMS_EXPR || ((SymExpr *)c)->val)
@@ -168,443 +134,205 @@ Expr *read_code()
 
           return new CExpr(FAIL, c);
         }
-        case 'l':
+        case Token::Let:
         {
-          our_ungetc('l');
-          pref = eat_str("let");
-          if (pref) break;
-
           string id(prefix_id());
-          SymSExpr *var = new SymSExpr(id);
+          SymSExpr* var = new SymSExpr(id);
 
-          Expr *t1 = read_code();
+          Expr* t1 = read_code();
 
-          pair<Expr *, Expr *> prev =
-              symbols->insert(id.c_str(), pair<Expr *, Expr *>(var, NULL));
+          pair<Expr*, Expr*> prev =
+              symbols->insert(id.c_str(), pair<Expr*, Expr*>(var, NULL));
 
-          Expr *t2 = read_code();
+          Expr* t2 = read_code();
 
           symbols->insert(id.c_str(), prev);
 
-          eat_char(')');
+          eat_token(Token::Close);
           return new CExpr(LET, var, t1, t2);
         }
-        case 'i':
+        case Token::IfMarked:
         {
-          our_ungetc('i');
-          pref = eat_str("if", false);
-          if (pref) break;
-          char c;
-          switch (c = our_getc())
+          int index = s_lexer->YYLeng() > 8 ? atoi(s_lexer->YYText() + 8) : 1;
+          Expr* e1 = read_code();
+          Expr* e2 = read_code();
+          Expr* e3 = read_code();
+          Expr* ret = NULL;
+          if (index >= 1 && index <= 32)
           {
-            case 'm':
-            {
-              our_ungetc('m');
-              pref = eat_str("marked", false);
-              if (pref)
-              {
-                pref->insert(0, "if");
-                break;
-              }
-              int index = read_index();
-              Expr *e1 = read_code();
-              Expr *e2 = read_code();
-              Expr *e3 = read_code();
-              Expr *ret = NULL;
-              if (index >= 1 && index <= 32)
-              {
-                ret = new CExpr(IFMARKED, new IntExpr(index - 1), e1, e2, e3);
-              }
-              else
-              {
-                std::cout << "Can't make IFMARKED with index = " << index
-                          << std::endl;
-              }
-              Expr::markedCount++;
-              // Expr *ret = new CExpr(IFMARKED, e1, e2, e3);
-              eat_char(')');
-              return ret;
-            }
-            case 'e':
-            {
-              our_ungetc('e');
-              pref = eat_str("equal", false);
-              if (pref)
-              {
-                pref->insert(0, "if");
-                break;
-              }
-              Expr *e1 = read_code();
-              Expr *e2 = read_code();
-              Expr *e3 = read_code();
-              Expr *e4 = read_code();
-              Expr *ret = new CExpr(IFEQUAL, e1, e2, e3, e4);
-              eat_char(')');
-              return ret;
-            }
-            default:
-              our_ungetc(c);
-              pref = new string("if");
-              break;
+            ret = new CExpr(IFMARKED, new IntExpr(index - 1), e1, e2, e3);
           }
-          break;
-        }
-        case 'm':
-        {
-          char c;
-          switch ((c = our_getc()))
+          else
           {
-            case 'a':
-            {
-              char cc;
-              switch ((cc = our_getc()))
-              {
-                case 't':
-                {
-                  our_ungetc('t');
-                  pref = eat_str("tch");
-                  if (pref)
-                  {
-                    pref->insert(0, "ma");
-                    break;
-                  }
-                  vector<Expr *> cases;
-                  cases.push_back(read_code());  // the scrutinee
-                  while ((c = non_ws()) != ')' && c != 'd')
-                  {
-                    our_ungetc(c);
-                    cases.push_back(read_case());
-                  }
-                  if (cases.size() == 1)  // counting scrutinee
-                    report_error("A match has no cases.");
-                  if (c == 'd')
-                  {
-                    // we have a default case
-                    // delete eat_str("efault");
-                    our_ungetc(c);
-                    cases.push_back(read_case());
-                  }
-                  return new CExpr(MATCH, cases);
-                }
-                case 'r':
-                {
-                  our_ungetc('r');
-                  pref = eat_str("rkvar", false);
-                  if (pref)
-                  {
-                    pref->insert(0, "ma");
-                    break;
-                  }
-                  int index = read_index();
-                  CExpr *ret = NULL;
-                  if (index >= 1 && index <= 32)
-                  {
-                    ret =
-                        new CExpr(MARKVAR, new IntExpr(index - 1), read_code());
-                  }
-                  else
-                  {
-                    std::cout << "Can't make MARKVAR with index = " << index
-                              << std::endl;
-                  }
-                  Expr::markedCount++;
-                  eat_char(')');
-                  return ret;
-                }
-                default:
-                  our_ungetc(c);
-                  pref = new string("ma");
-                  break;
-              }
-              break;
-            }
-            case 'p':
-            {
-              char cc = our_getc();
-              switch (cc) {
-                case '_':
-                {
-                  char c = our_getc();
-                  switch (c)
-                  {
-                    case 'a':
-                    {
-                      our_ungetc('a');
-                      pref = eat_str("add");
-                      if (pref)
-                      {
-                        pref->insert(0, "mp_");
-                        break;
-                      }
-                      Expr *e1 = read_code();
-                      Expr *e2 = read_code();
-                      Expr *ret = new CExpr(ADD, e1, e2);
-                      eat_char(')');
-                      return ret;
-                    }
-                    case 'n':
-                    {
-                      our_ungetc('n');
-                      pref = eat_str("neg");
-                      if (pref)
-                      {
-                        pref->insert(0, "mp_");
-                        break;
-                      }
-
-                      Expr *ret = new CExpr(NEG, read_code());
-                      eat_char(')');
-                      return ret;
-                    }
-                    case 'i':
-                    {  // mpz_if_neg
-                      char c = our_getc();
-                      if (c == 'f')
-                      {
-                        c = our_getc();
-                        switch (c)
-                        {
-                          case 'n':
-                          {
-                            our_ungetc('n');
-                            pref = eat_str("neg");
-                            if (pref)
-                            {
-                              pref->insert(0, "mp_if");
-                              break;
-                            }
-                            Expr *e1 = read_code();
-                            Expr *e2 = read_code();
-                            Expr *e3 = read_code();
-                            Expr *ret = new CExpr(IFNEG, e1, e2, e3);
-                            eat_char(')');
-                            return ret;
-                          }
-                          case 'z':
-                          {
-                            our_ungetc('z');
-                            pref = eat_str("zero");
-                            if (pref)
-                            {
-                              pref->insert(0, "mp_if");
-                              break;
-                            }
-                            Expr *e1 = read_code();
-                            Expr *e2 = read_code();
-                            Expr *e3 = read_code();
-                            Expr *ret = new CExpr(IFZERO, e1, e2, e3);
-                            eat_char(')');
-                            return ret;
-                          }
-                          default:
-                            our_ungetc(c);
-                            pref = new string("mp_if");
-                            break;
-                        }
-                      }
-                      else
-                      {
-                        our_ungetc(c);
-                        pref = new string("mp_i");
-                        break;
-                      }
-                    }
-                    case 'm':
-                    {
-                      our_ungetc('m');
-                      pref = eat_str("mul");
-                      if (pref)
-                      {
-                        pref->insert(0, "mp_");
-                        break;
-                      }
-                      Expr *e1 = read_code();
-                      Expr *e2 = read_code();
-                      Expr *ret = new CExpr(MUL, e1, e2);
-                      eat_char(')');
-                      return ret;
-                    }
-                    case 'd':
-                    {
-                      our_ungetc('d');
-                      pref = eat_str("div");
-                      if (pref)
-                      {
-                        pref->insert(0, "mp_");
-                        break;
-                      }
-                      Expr *e1 = read_code();
-                      Expr *e2 = read_code();
-                      Expr *ret = new CExpr(DIV, e1, e2);
-                      eat_char(')');
-                      return ret;
-                    }
-                    default:
-                      our_ungetc(c);
-                      pref = new string("mp_");
-                      break;
-                  }
-                  break;
-                }
-                case 'z':
-                {
-                  our_ungetc('z');
-                  pref = eat_str("z_to_mpq", true);
-                  if (pref)
-                  {
-                    pref->insert(0, "mp");
-                    break;
-                  }
-                  Expr* e = read_code();
-                  Expr* ret = new CExpr(MPZ_TO_MPQ, e);
-                  eat_char(')');
-                  return ret;
-                }
-                default:
-                  our_ungetc(cc);
-                  pref = new string("mp");
-                  break;
-              }
-              break;
-            }
-            default:
-              our_ungetc(c);
-              pref = new string("m");
-              break;
+            std::cout << "Can't make IFMARKED with index = " << index
+                      << std::endl;
           }
-          break;
+          Expr::markedCount++;
+          eat_token(Token::Close);
+          return ret;
         }
-        case '~':
+        case Token::IfEqual:
         {
-          Expr *e = read_code();
+          Expr* e1 = read_code();
+          Expr* e2 = read_code();
+          Expr* e3 = read_code();
+          Expr* e4 = read_code();
+          Expr* ret = new CExpr(IFEQUAL, e1, e2, e3, e4);
+          eat_token(Token::Close);
+          return ret;
+        }
+        case Token::Match:
+        {
+          Token::Token c;
+          vector<Expr*> cases;
+          cases.push_back(read_code());  // the scrutinee
+          while ((c = next_token()) != Token::Close && c != 'd')
+          {
+            reinsert_token(c);
+            cases.push_back(read_case());
+          }
+          if (cases.size() == 1)  // counting scrutinee
+            report_error("A match has no cases.");
+          return new CExpr(MATCH, cases);
+        }
+        case Token::MarkVar:
+        {
+          int index = s_lexer->YYLeng() > 7 ? atoi(s_lexer->YYText() + 7) : 1;
+          CExpr* ret = NULL;
+          if (index >= 1 && index <= 32)
+          {
+            ret = new CExpr(MARKVAR, new IntExpr(index - 1), read_code());
+          }
+          else
+          {
+            std::cout << "Can't make MARKVAR with index = " << index
+                      << std::endl;
+          }
+          Expr::markedCount++;
+          eat_token(Token::Close);
+          return ret;
+        }
+        case Token::MpAdd:
+        case Token::MpMul:
+        case Token::MpDiv:
+        {
+          auto op = c == Token::MpAdd ? ADD : c == Token::MpMul ? MUL : DIV;
+          Expr* e1 = read_code();
+          Expr* e2 = read_code();
+          Expr* ret = new CExpr(op, e1, e2);
+          eat_token(Token::Close);
+          return ret;
+        }
+        case Token::MpNeg:
+        case Token::MpzToMpq:
+        {
+          Expr* ret =
+              new CExpr(c == Token::MpNeg ? NEG : MPZ_TO_MPQ, read_code());
+          eat_token(Token::Close);
+          return ret;
+        }
+        case Token::MpIfNeg:
+        case Token::MpIfZero:
+        {
+          Expr* e1 = read_code();
+          Expr* e2 = read_code();
+          Expr* e3 = read_code();
+          Expr* ret =
+              new CExpr(c == Token::MpIfNeg ? IFNEG : IFZERO, e1, e2, e3);
+          eat_token(Token::Close);
+          return ret;
+        }
+        case Token::Tilde:
+        {
+          Expr* e = read_code();
           if (e->getclass() == INT_EXPR)
           {
-            IntExpr *ee = (IntExpr *)e;
+            IntExpr* ee = (IntExpr*)e;
             mpz_neg(ee->n, ee->n);
-            eat_char(')');
+            eat_token(Token::Close);
             return ee;
           }
           else if (e->getclass() == RAT_EXPR)
           {
-            RatExpr *ee = (RatExpr *)e;
+            RatExpr* ee = (RatExpr*)e;
             mpq_neg(ee->n, ee->n);
-            eat_char(')');
+            eat_token(Token::Close);
             return ee;
           }
           else
           {
             report_error(
-                "Negative sign with expr that is not an int. literal.");
+                "Negative sign with expr that is not an numeric literal.");
           }
         }
-        case 'c':
+        case Token::Compare:
         {
-          our_ungetc('c');
-          pref = eat_str("compare");
-          if (pref) break;
-          Expr *e1 = read_code();
-          Expr *e2 = read_code();
-          Expr *e3 = read_code();
-          Expr *e4 = read_code();
-          eat_char(')');
+          Expr* e1 = read_code();
+          Expr* e2 = read_code();
+          Expr* e3 = read_code();
+          Expr* e4 = read_code();
+          eat_token(Token::Close);
           return new CExpr(COMPARE, e1, e2, e3, e4);
         }
-        break;
-        case EOF: report_error("Unexpected end of file."); break;
-        default:
-        {  // the application case
-          our_ungetc(c);
+        case Token::Eof:
+        {
+          report_error("Unexpected end of file.");
           break;
         }
-      }
-      // parse application
-      if (pref)
-      {
-        // We have eaten part of the name (or all) of an applied identifier. We
-        // parse the rest of the identifier and append it. Note: we don't want
-        // `prefix_id()` to skip whitespace, otherwise we may accidentially
-        // parse the next identifier (if `pref` already holds the complete
-        // identifier) and add it to the current one.
-        pref->append(prefix_id(false));
-      }
-      else
-      {
-        pref = new string(prefix_id());
-      }
+        default:
+        {  // the application case
+          std::string pref = s_lexer->YYText();
+          Expr* ret = progs[pref];
+          if (!ret) ret = symbols->get(pref.c_str()).first;
 
-      Expr *ret = progs[*pref];
-      if (!ret)
-        ret = symbols->get(pref->c_str()).first;
+          if (!ret)
+            report_error(
+                string("Undeclared identifier at head of an application: ")
+                + pref);
 
-      if (!ret)
-        report_error(string("Undeclared identifier at head of an application: ")
-                     + *pref);
+          ret->inc();
 
-      ret->inc();
-      delete pref;
-
-      while ((c = non_ws()) != ')')
-      {
-        our_ungetc(c);
-        Expr *ke = read_code();
-        Expr *orig_ret = ret;
-        ret = Expr::make_app(ret, ke);
-        if (orig_ret->getclass() == CEXPR)
-        {
-          orig_ret->dec();
+          while ((c = next_token()) != Token::Close)
+          {
+            reinsert_token(c);
+            Expr* ke = read_code();
+            Expr* orig_ret = ret;
+            ret = Expr::make_app(ret, ke);
+            if (orig_ret->getclass() == CEXPR)
+            {
+              orig_ret->dec();
+            }
+          }
+          return ret;
         }
       }
-      return ret;
     }  // end case '('
-    case EOF: report_error("Unexpected end of file."); break;
-    case '_': report_error("Holes may not be used in code."); return NULL;
-    case '0':
-    case '1':
-    case '2':
-    case '3':
-    case '4':
-    case '5':
-    case '6':
-    case '7':
-    case '8':
-    case '9':
+    case Token::Natural:
     {
-      our_ungetc(d);
-      string v;
-      char c;
-      while (isdigit(c = our_getc())) v.push_back(c);
-      bool parseMpq = false;
-      if (c == '/')
-      {
-        parseMpq = true;
-        v.push_back(c);
-        while (isdigit(c = our_getc())) v.push_back(c);
-      }
-      our_ungetc(c);
-      if (parseMpq)
-      {
-        mpq_t num;
-        mpq_init(num);
-        if (mpq_set_str(num, v.c_str(), 10) == -1)
-          report_error("Error reading a mpq numeral.");
+      mpz_t num;
+      if (mpz_init_set_str(num, s_lexer->YYText(), 10) == -1)
+        report_error("Error reading a numeral.");
+      return new IntExpr(num);
+    }
+    case Token::Rational:
+    {
+      mpq_t num;
+      mpq_init(num);
+      if (mpq_set_str(num, s_lexer->YYText(), 10) == -1)
+        report_error("Error reading a mpq numeral.");
 
-        Expr *e = new RatExpr(num);
-        return e;
-      }
-      else
-      {
-        mpz_t num;
-        if (mpz_init_set_str(num, v.c_str(), 10) == -1)
-          report_error("Error reading a numeral.");
-        return new IntExpr(num);
-      }
+      return new RatExpr(num);
+    }
+    case Token::Eof:
+    {
+      report_error("Unexpected end of file.");
+      break;
     }
     default:
     {
-      our_ungetc(d);
-      string id(prefix_id());
-      pair<Expr *, Expr *> p = symbols->get(id.c_str());
-      Expr *ret = p.first;
+      string id(s_lexer->YYText());
+      pair<Expr*, Expr*> p = symbols->get(id.c_str());
+      Expr* ret = p.first;
       if (!ret) ret = progs[id];
       if (!ret) report_error(string("Undeclared identifier: ") + id);
       ret->inc();
@@ -1482,18 +1210,4 @@ start_run_code:
     }
   }  // end switch
   return NULL;
-}
-
-int read_index()
-{
-  int index = 1;
-  string v;
-  char c;
-  while (isdigit(c = our_getc())) v.push_back(c);
-  our_ungetc(c);
-  if (v.length() > 0)
-  {
-    index = atoi(v.c_str());
-  }
-  return index;
 }

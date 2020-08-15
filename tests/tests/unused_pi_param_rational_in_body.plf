@@ -4,5 +4,5 @@
 
 (declare rational_predicate (! r mpq type))
 
-(declare (! v value (! var variable (! a (assignment_witness var v) (rational_predicate 1/1)))))
+(declare fun (! v value (! var variable (! a (assignment_witness var v) (rational_predicate 1/1)))))
 
