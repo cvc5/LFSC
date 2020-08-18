@@ -1,0 +1,86 @@
+; Sorts and terms:
+
+(declare sort type)
+(declare term type)
+
+; Type judgment: term t has sort 
+
+(declare has_type (! t term (! s sort type)))
+
+; Theory holds: term t holds, where t should have Boolean type
+
+(declare th_holds (! t term type))
+
+; sorts :
+
+(declare Bool sort)
+
+; function constructor :
+
+(declare arrow (! s1 sort (! s2 sort sort)))
+
+; high-order apply :
+
+(declare apply (! t1 term (! t2 term term)))
+
+
+; Booleans :
+
+(declare true term)
+(declare type_true (has_type true Bool))
+
+(declare false term)
+(declare type_false (has_type false Bool))
+
+(declare f_=  term)
+(define = (# t1 term (# t2 term (apply (apply f_= t1) t2))))  ; macro
+
+
+; Congruence :
+
+(declare refl (! t term
+	(th_holds (= t t)))
+
+(declare cong (! a1 term
+              (! b1 term
+              (! a2 term
+              (! b2 term
+              (! u1 (th_holds (= a1 b1))
+              (! u2 (th_holds (= a2 b2))
+              (! s sort
+              (! t (has_type (apply a1 a2) s)
+                (th_holds (= (apply a1 a2) (apply b1 b2))))))))))))
+
+
+
+; fail means not well typed
+(program type_check ((t term)) sort  
+  ; TODO (recursive)
+ (match t
+   ((apply t1 t2)
+     (match t1
+        (f_= …)
+        (let (s1 (type_check t1))
+        (match s1
+           ((arrow s11 s12)
+           (fail sort))
+  ; all other terms?
+  (true Bool)
+  (false Bool)
+)
+
+
+(check
+(% U sort
+(% a term
+(% at (has_type a U)
+(% b term
+(% bt (has_type b U)
+(% f term
+(% ft (has_type f (arrow U U))
+(% p (th_holds (= a b))
+(% h (has_type (apply f a) U)
+(: (th_holds (= (apply f a) (apply f b)))
+   (cong _ _ _ _ (refl f) p _ h))
+))))))))))
+
