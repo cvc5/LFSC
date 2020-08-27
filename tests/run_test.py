@@ -4,6 +4,7 @@ import re
 import os.path
 import sys
 import subprocess
+import resource
 
 class TestConfiguration(object):
     ''' Represents a test to run.  '''
@@ -101,12 +102,15 @@ class TestFile(object):
         self.config_map = m
 
 def main():
+    # Units: bytes
+    resource.setrlimit(resource.RLIMIT_STACK, (2**25, resource.RLIM_INFINITY))
     configuration = TestConfiguration()
     cmd = [configuration.lfscc] + configuration.dep_graph.getPathsInOrder()
     print('Command: ', cmd)
     result = subprocess.Popen(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
     (stdout, _) = result.communicate()
     if 0 != result.returncode:
+        print(f"Exited with code {result.returncode}")
         if stdout:
             print(stdout.decode())
     return result.returncode
