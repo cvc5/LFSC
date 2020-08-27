@@ -10,6 +10,7 @@
 
 #include "chunking_memory_management.h"
 #include "gmp.h"
+#include "trie.h"
 
 #define DEBUG_SYM_NAMES
 //#define DEBUG_SYMS
@@ -196,6 +197,14 @@ class Expr
      holes in e.  We do not take responsibility for the reference to
      this nor the reference to e. */
   bool defeq(Expr *e);
+
+  /* Checks whether all variables (SymExprs and SymSExprs) are either (a) bound
+   * by a binder in the expression or (b) in the provided trie.
+   *
+   * If so, returns nullptr.
+   * If not, returns a pointer to the unbound variable.
+   */
+  Expr* find_unbound_vars(Trie<std::pair<Expr*, Expr*> >* symbols);
 
   /* return a clone of this expr.  All abstractions are really duplicated
      in memory.  Other expressions may not actually be duplicated in

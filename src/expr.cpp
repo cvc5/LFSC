@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <cstddef>
 #include <sstream>
+#include <unordered_set>
 #ifdef _MSC_VER
 #include <algorithm>
 #endif
@@ -685,6 +686,123 @@ bool Expr::_free_in(Expr *x, expr_ptr_set_t *visited)
     }
   }
   std::abort();  // should not be reached
+}
+
+Expr* Expr::find_unbound_vars(Trie<std::pair<Expr*, Expr*>>* symbols)
+{
+  using namespace std;
+  unordered_set<Expr*> bound_exprs;
+  vector<pair<bool, Expr*>> to_visit{{true, this}};
+  cerr << "Expr::find_unbound_vars in ";
+  this->print(cerr);
+  cerr << endl;
+  while (to_visit.size())
+  {
+    Expr* e = to_visit.back().second;
+    bool previsit = to_visit.back().first;
+    if (!previsit)
+    {
+      to_visit.pop_back();
+    }
+    else
+    {
+      to_visit.back().first = false;
+    }
+    switch (e->getclass())
+    {
+      case INT_EXPR:
+      case RAT_EXPR:
+      case HOLE_EXPR:
+      {
+        break;
+      }
+      case SYM_EXPR:
+      {
+        SymExpr* s = static_cast<SymExpr*>(e);
+        if (previsit)
+        {
+          if (s->val)
+          {
+            to_visit.push_back({true, s->val});
+          }
+          else
+          {
+            if (bound_exprs.count(e))
+            {
+              break;
+            }
+            else
+            {
+              return e;
+            }
+          }
+        }
+        break;
+      }
+      case SYMS_EXPR:
+      {
+        SymSExpr* s = static_cast<SymSExpr*>(e);
+        if (previsit)
+        {
+          if (s->val)
+          {
+            to_visit.push_back({true, s->val});
+          }
+          else
+          {
+            if (bound_exprs.count(e)
+                || symbols->get(s->s.c_str()).first != nullptr)
+            {
+              break;
+            }
+            else
+            {
+              return e;
+            }
+          }
+        }
+        break;
+      }
+      case CEXPR:
+      {
+        CExpr* c = static_cast<CExpr*>(e);
+        if (previsit)
+        {
+          if (c->getop() == LAM || c->getop() == PI)
+          {
+            bound_exprs.insert(c->kids[0]);
+          }
+          Expr** cur = c->kids;
+          Expr* k;
+          while ((k = *cur++))
+          {
+            to_visit.push_back({true, k});
+          }
+        }
+        else
+        {
+          if (c->getop() == LAM || c->getop() == PI)
+          {
+            bound_exprs.erase(c->kids[0]);
+          }
+        }
+        break;
+      }
+      default: assert(false);
+    }
+  }
+  if (bound_exprs.size() > 0)
+  {
+    cerr << "Some expressions are still bound:" << endl;
+    for (Expr* e : bound_exprs)
+    {
+      cerr << "  ";
+      e->print(cerr);
+      cerr << endl;
+    }
+    assert(false);
+  }
+  return nullptr;
 }
 
 void Expr::calc_free_in()
