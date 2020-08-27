@@ -110,7 +110,7 @@ def main():
     result = subprocess.Popen(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
     (stdout, _) = result.communicate()
     if 0 != result.returncode:
-        print(f"Exited with code {result.returncode}")
+        print("Exited with code {}".format(result.returncode))
         if stdout:
             print(stdout.decode())
     return result.returncode
