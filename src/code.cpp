@@ -1059,7 +1059,13 @@ start_run_code:
       // Apply WHR to c-expressions, otherwise you don't really know the head.
       if (scrut->getclass() == CEXPR)
       {
-        scrut = static_cast<CExpr*>(scrut)->whr();
+        Expr *tmp = static_cast<CExpr*>(scrut)->whr();
+        // If a new expression is returned, dec the old RC
+        if (tmp != scrut)
+        {
+          scrut->dec();
+          scrut = tmp;
+        }
       }
       vector<Expr *> args;
       Expr *hd = scrut->collect_args(args);
