@@ -181,7 +181,7 @@ class Expr
   /* if this is an APP, return the head, and store the args in args.
      If follow_defs is true, we proceed through defined heads;
      otherwise not. */
-  Expr *collect_args(std::vector<Expr *> &args, bool follow_defs = true);
+  Expr *collect_args(std::vector<Expr *> &args, bool follow_defs = true) const;
 
   Expr *get_head(bool follow_defs = true) const;
 
@@ -189,7 +189,7 @@ class Expr
 
   std::string toString();
 
-  void print(std::ostream &);
+  void print(std::ostream &) const;
   void debug();
 
   /* check whether or not this expr is alpha equivalent to e.  If this
@@ -446,5 +446,7 @@ inline Expr *Expr::followDefs()
 
   return this;
 }
+
+std::ostream& operator<<(std::ostream& o, const Expr& e);
 
 #endif

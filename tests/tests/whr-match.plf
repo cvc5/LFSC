@@ -1,0 +1,18 @@
+(declare sort type)
+(declare term type)
+(declare apply (! t1 term (! t2 term term)))
+(declare f_real term)
+(declare x term)
+(declare bool type)
+(declare true bool)
+(declare false bool)
+
+(define f (: (! t term term) (\ t (apply f_real t))))
+
+(program check_is_app ((t term)) bool
+         (match t
+                ((apply t1 t2) true)
+                (default false)))
+
+(declare is_app (! t term (! b bool (! sc (^ (check_is_app t) b) bool))))
+(check (is_app (f x) true))

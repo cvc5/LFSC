@@ -261,7 +261,7 @@ Expr *Expr::make_app(Expr *e1, Expr *e2)
 
 int Expr::cargCount = 0;
 
-Expr *Expr::collect_args(std::vector<Expr *> &args, bool follow_defs)
+Expr *Expr::collect_args(std::vector<Expr *> &args, bool follow_defs) const
 {
   // cargCount++;
   // if( cargCount%1000==0)
@@ -837,9 +837,9 @@ static void print_vector(ostream &os, const vector<Expr *> &v)
   }
 }
 
-void Expr::print(ostream &os)
+void Expr::print(ostream &os) const
 {
-  CExpr *e = (CExpr *)this;  // for CEXPR cases
+  const CExpr *e = (const CExpr *)this;  // for CEXPR cases
 
   // std::cout << e->getop() << " ";
   /*
@@ -1166,3 +1166,9 @@ int SymExpr::mark()
   return mark_map[this];
 }
 void SymExpr::smark(int m) { mark_map[this] = m; }
+
+std::ostream& operator<<(std::ostream& o, const Expr& e)
+{
+  e.print(o);
+  return o;
+}
