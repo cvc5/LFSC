@@ -14,6 +14,8 @@ set(lfsc_test_file_list
   sage-app2-bench_201.plf
   sat.plf
   semicolon_after_id.plf
+  skolem1.plf
+  skolem2.plf
   smt.plf
   th_arrays.plf
   th_base.plf
