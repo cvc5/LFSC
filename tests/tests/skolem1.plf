@@ -1,0 +1,74 @@
+(declare sort type)
+(declare term type)
+(declare holds (! t term type))
+(declare Bool sort)
+(declare apply (! t1 term (! t2 term term)))
+(declare false term)
+(declare f_not term)
+(define not (# t term (apply f_not t)))
+(declare f_and term)
+(define and (# t1 term (# t2 term (apply (apply f_and t1) t2))))
+(declare f_=  term)
+(define = (# t1 term (# t2 term (apply (apply f_= t1) t2))))
+(declare var (! v mpz (! s sort term)))
+(declare bvar (! v mpz (! s sort term)))
+(declare forall (! v mpz (! s sort term)))
+(declare witness (! v mpz (! s sort term)))
+(declare map_to_witness (! k term (! w term type)))
+(declare Ok type)
+(declare ok Ok)
+
+(declare contradiction (! f term (! p1 (holds f) (! p2 (holds (not f)) (holds false)))))
+(declare and_elim_1 (! f1 term (! f2 term (! p (holds (and f1 f2)) (holds f1)))))
+(declare and_elim_2 (! f1 term (! f2 term (! p (holds (and f1 f2)) (holds f2)))))
+(declare not_not_elim (! f term (! p (holds (not (not f))) (holds f))))
+
+(declare trans (! t1 term (! t2 term (! t3 term (! u1 (holds (= t1 t2)) (! u2 (holds (= t2 t3)) (holds (= t1 t3))))))))
+
+(program mpz_ifequal ((v1 mpz) (v mpz) (t term) (s term)) term (mp_ifzero (mp_add (mp_neg v1) v) t s) )
+
+(program substitute ((t term) (v mpz) (s term)) term
+  (match t
+    ((bvar v1 u1) 
+       (mpz_ifequal v v1 s t))
+    ((apply t1 t2) (apply (substitute t1 v s) (substitute t2 v s)))
+    (default t)
+  ))
+
+
+(declare mk_skolemize (! body term
+                     (! v mpz
+                     (! s sort
+		     (! goal term
+                     (! p (holds (not (apply (forall v s) body)))
+		     (! u (! v' mpz
+		          (! r (map_to_witness (var v' s) (apply (witness v s)
+		               (not body)))
+		     (holds goal)))
+		     (holds goal))))))))
+
+(declare skolemize (! body term
+                     (! v mpz
+                     (! s sort
+                     (! bodyi term
+		     (! k term
+                     (! p (holds (not (apply (forall v s) body)))
+		     (! u (map_to_witness k (apply (witness v s) (not body)))
+                     (! r (^ (substitute body v k) bodyi)
+		     (holds (not bodyi)))))))))))
+
+(declare U sort)
+(define a (var 1 U))
+(define b (var 2 U))
+
+(check
+(% p1 (holds (not (= a b)))
+(% p2 (holds (not (apply (forall 7 U) (not (and (= a (bvar 7 U)) (= (bvar 7 U) b))))))
+(: (holds false)
+  (mk_skolemize _ _ _ _ p2
+    (\ v' (\ r
+      (contradiction _ (trans _ _ _
+        (and_elim_1 _ _ (not_not_elim _ (skolemize _ _ _ _ _ p2 r)))
+        (and_elim_2 _ _ (not_not_elim _ (skolemize _ _ _ _ _ p2 r)))
+    )
+    p1))))))))
