@@ -968,6 +968,13 @@ void check_file(const char *_filename, args a, sccwriter *scw, libwriter *lw)
   fs.close();
 }
 
+void rebind_error(const std::string& id)
+{
+  stringstream o;
+  o << "The top-level identifier \"" << id << "\" was already bound";
+  report_error(o.str());
+}
+
 void check_file(std::istream& in,
                 const std::string& _filename,
                 args a,
@@ -1006,8 +1013,10 @@ void check_file(std::istream& in,
           s->val = t;
           pair<Expr*, Expr*> prev =
               symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, ttp));
-          if (prev.first) prev.first->dec();
-          if (prev.second) prev.second->dec();
+          if (prev.first || prev.second)
+          {
+            rebind_error(id);
+          }
           break;
         }
         case Token::Declare:
@@ -1030,8 +1039,10 @@ void check_file(std::istream& in,
           pair<Expr*, Expr*> prev =
               symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, t));
           if (lw) lw->add_symbol(s, t);
-          if (prev.first) prev.first->dec();
-          if (prev.second) prev.second->dec();
+          if (prev.first || prev.second)
+          {
+            rebind_error(id);
+          }
           break;
         }
         case Token::Check:
@@ -1088,8 +1099,10 @@ void check_file(std::istream& in,
           SymSExpr* s = new SymSExpr(id);
           pair<Expr*, Expr*> prev =
               symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, ttp));
-          if (prev.first) prev.first->dec();
-          if (prev.second) prev.second->dec();
+          if (prev.first || prev.second)
+          {
+            rebind_error(id);
+          }
           break;
         }
         case Token::Run:

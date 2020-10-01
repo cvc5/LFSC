@@ -1,0 +1,3 @@
+; Error Line: 3
+(declare a mpz)
+(opaque a 1)
