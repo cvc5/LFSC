@@ -231,7 +231,8 @@ start_check:
           eat_rparen();
           CExpr *tmp = new CExpr(PI, sym, domain, rec_computed);
           tmp->calc_free_in();
-          if(tmp->get_free_in()) {
+          if (tmp->get_free_in())
+          {
             std::ostringstream o;
             o << "The type of an annotated lambda is dependent."
               << "\n1. The type    : ";
@@ -253,7 +254,7 @@ start_check:
           symbols->insert(id.c_str(), prev);
           if (create)
           {
-            CExpr *ret = new CExpr(LAM, sym, range);
+            CExpr* ret = new CExpr(LAM, sym, range);
             // Mark this as "cloned" to block no-clone optimization
             ret->setcloned();
             return ret;
