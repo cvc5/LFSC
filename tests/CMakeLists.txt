@@ -24,6 +24,7 @@ set(lfsc_test_file_list
   unused_pi_param_rational_in_body.plf
   use-bool.plf
   use-use-bool.plf
+  whr-match.plf
 )
 
 set(test_script ${CMAKE_CURRENT_LIST_DIR}/run_test.py)
