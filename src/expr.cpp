@@ -159,7 +159,14 @@ Expr *Expr::clone()
           var->val = newvar;
           Expr *bod = e->kids[1]->clone();
           var->val = prev;
-          return new CExpr(LAM, newvar, bod);
+          CExpr* r = new CExpr(LAM, newvar, bod);
+          // Lambdas which have `cloned` set should never have the no-clone
+          // optimization applied, even after cloning. Propagate this.
+          if (e->cloned())
+          {
+            r->setcloned();
+          }
+          return r;
         }
         case PI: {
 #ifdef DEBUG_SYM_NAMES

@@ -39,5 +39,5 @@ jobs:
       run: make -j2
       working-directory: build
     - name: Test
-      run: make test
+      run: ctest --output-on-failure
       working-directory: build

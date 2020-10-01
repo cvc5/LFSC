@@ -231,13 +231,32 @@ start_check:
           eat_rparen();
           CExpr *tmp = new CExpr(PI, sym, domain, rec_computed);
           tmp->calc_free_in();
+          if (tmp->get_free_in())
+          {
+            std::ostringstream o;
+            o << "The type of an annotated lambda is dependent."
+              << "\n1. The type    : ";
+            tmp->print(o);
+            o << "\n2. The variable: ";
+            sym->print(o);
+            o << "\n3. The body    : ";
+            range->print(o);
+            report_error(o.str());
+          }
+          // Since `sym` is the SymSExpr used inside the *value* of this
+          // Lambda, having it also be in the type would cause type-checking
+          // bindings to change the value.
+          //
+          // We change the type's symbol to avoid this.
+          tmp->kids[0] = new SymSExpr(id);
           *computed = static_cast<Expr*>(tmp);
 
           symbols->insert(id.c_str(), prev);
           if (create)
           {
-            CExpr *ret = new CExpr(PI, sym, domain, range);
-            ret->calc_free_in();
+            CExpr* ret = new CExpr(LAM, sym, range);
+            // Mark this as "cloned" to block no-clone optimization
+            ret->setcloned();
             return ret;
           }
           return 0;
