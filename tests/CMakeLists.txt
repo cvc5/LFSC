@@ -11,6 +11,9 @@ set(lfsc_test_file_list
   mpz_to_mpq.plf
   mpz_to_mpq_checks.plf
   num.plf
+  redecl.plf
+  redefn.plf
+  reopaque.plf
   sage-app2-bench_201.plf
   sat.plf
   semicolon_after_id.plf
