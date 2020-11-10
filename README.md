@@ -7,6 +7,8 @@ Authors: Andy Reynolds and Aaron Stump
 
 You need cmake (>= version 2.8.9), gmp, and flex to build LFSC Checker.
 
+On macOS, we recommend installing gmp and flex using homebrew.
+
 To build a regular build, issue:
 
 ```bash

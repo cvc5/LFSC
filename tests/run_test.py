@@ -104,7 +104,8 @@ class TestFile(object):
 
 def main():
     # Units: bytes
-    resource.setrlimit(resource.RLIMIT_STACK, (2**25, resource.RLIM_INFINITY))
+    soft, hard = resource.getrlimit(resource.RLIMIT_STACK)
+    resource.setrlimit(resource.RLIMIT_STACK, (min(2**25, hard), hard))
     configuration = TestConfiguration()
     cmd = [configuration.lfscc] + configuration.dep_graph.getPathsInOrder()
     print('Command: ', cmd)
