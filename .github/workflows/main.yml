@@ -41,7 +41,7 @@ jobs:
       if: runner.os == 'macOS'
       run: |
         brew install \
-          cln \
+          gmp \
           flex
     - name: Setup Build Dir
       run: mkdir build
