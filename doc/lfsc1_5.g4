@@ -78,7 +78,7 @@ ntype
 // (^ c t)
 
 // Extension /////////////////////
-vtype : '(' 'var' iden ntype ')' ;
+vtype : '(' 'id' iden ntype ')' ;
 //////////////////////////////////
 
 type 
@@ -89,7 +89,7 @@ type
   | '(' '!' iden ntype type ')' 
 // Extension ///////////////////////////////
   | '(' 'Forall' iden ntype type ')' 
-  | '(' '->' ( ntype | vtype )+ type ')'  
+  | '(' '->' '(' ( ntype | vtype )+ ')' type ')'  
 ////////////////////////////////////////////
   ;
 // (Forall ξ τ₁ τ₂)
@@ -117,14 +117,16 @@ term
   | rat_const
   | '(' term term+ ')'
   | '(' '\\' iden term ')'
-  | '(' '@' iden term ')'
+  | '(' '@' iden term term ')'
   | '(' ':' type term ')'
   | '(' '%' iden type term ')'
 // Extensions ///////////////////
   | '(' 'lam' iden term ')'
   | '(' 'let' iden term term ')'
   | '(' 'proved-by' type term ')'
-  | '(' 'assuming' vtype+ term ')'
+  | '(' 'assuming' iden type term ')'
+// TODO
+//  | '(' 'assuming' '(' vtype+ ')' term ')'
   ;
 //////////////////////////////////
 // (lam ξ t)
