@@ -124,9 +124,7 @@ term
   | '(' 'lam' iden term ')'
   | '(' 'let' iden term term ')'
   | '(' 'proved-by' type term ')'
-  | '(' 'assuming' iden type term ')'
-// TODO
-//  | '(' 'assuming' '(' vtype+ ')' term ')'
+  | '(' 'assuming' '(' (ntype | vtype)+ ')' term ')'
   ;
 //////////////////////////////////
 // (lam ξ t)
