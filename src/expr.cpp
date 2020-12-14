@@ -866,7 +866,7 @@ void Expr::print(ostream &os) const
           else
             os << e->s;
 #ifdef DEBUG_SYMS
-            os << "[" << e << "]";
+          os << "[" << e << "]";
 #endif
           break;
         }

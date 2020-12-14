@@ -188,17 +188,18 @@ start_check:
         case Token::Arrow:
         {  // the arrow case
           DeclList decls = check_decl_list(create);
-          Expr * ret_kind;
-          Expr * ret = check(create, nullptr, &ret_kind);
+          Expr* ret_kind;
+          Expr* ret = check(create, nullptr, &ret_kind);
           for (const auto binding : decls.old_bindings)
           {
-            symbols->insert(get<0>(binding).c_str(), {get<1>(binding), get<2>(binding)});
+            symbols->insert(get<0>(binding).c_str(),
+                            {get<1>(binding), get<2>(binding)});
           }
           eat_rparen();
           auto p = build_validate_pi(move(decls.decls), ret, ret_kind, create);
           if (expected)
           {
-            //Checked by build-validate pi
+            // Checked by build-validate pi
             p.second->dec();
           }
           else
@@ -974,7 +975,7 @@ start_check:
   return 0;
 }
 
-std::pair<std::string, Expr *> check_decl_list_item()
+std::pair<std::string, Expr*> check_decl_list_item()
 {
   Token::Token t = next_token();
   if (t == Token::Open)
@@ -983,38 +984,38 @@ std::pair<std::string, Expr *> check_decl_list_item()
     if (t2 == Token::Colon)
     {
       string id(prefix_id());
-      Expr * ty = check(true, statType);
+      Expr* ty = check(true, statType);
       eat_token(Token::Close);
-      return { id, ty };
+      return {id, ty};
     }
     else
     {
       reinsert_token(t2);
       reinsert_token(t);
-      Expr * dummy;
-      Expr * ty = check(true, nullptr, &dummy);
+      Expr* dummy;
+      Expr* ty = check(true, nullptr, &dummy);
       dummy->dec();
-      return { "", ty };
+      return {"", ty};
     }
   }
   else
   {
     reinsert_token(t);
-    Expr * ty = check(true, statType);
-    return { "", ty };
+    Expr* ty = check(true, statType);
+    return {"", ty};
   }
 }
 
 DeclList check_decl_list(const bool create)
 {
-  std::vector<std::tuple<std::string,Expr *, Expr *>> old_bindings;
-  std::vector<std::pair<Expr *, Expr *>> decls;
+  std::vector<std::tuple<std::string, Expr*, Expr*>> old_bindings;
+  std::vector<std::pair<Expr*, Expr*>> decls;
   eat_token(Token::Open);
   Token::Token t = next_token();
   while (t != Token::Close)
   {
     reinsert_token(t);
-    std::pair<std::string, Expr *> p = check_decl_list_item();
+    std::pair<std::string, Expr*> p = check_decl_list_item();
     Expr* sym;
     if (p.first.size())
     {
@@ -1023,8 +1024,8 @@ DeclList check_decl_list(const bool create)
 #else
       sym = new SymExpr(p.first);
 #endif
-      auto o = symbols->insert(p.first.c_str(), { sym, p.second });
-      old_bindings.push_back({ p.first, o.first, o.second });
+      auto o = symbols->insert(p.first.c_str(), {sym, p.second});
+      old_bindings.push_back({p.first, o.first, o.second});
     }
     else
     {
@@ -1041,7 +1042,7 @@ DeclList check_decl_list(const bool create)
     }
     t = next_token();
   }
-  return { decls, old_bindings };
+  return {decls, old_bindings};
 }
 
 std::pair<Expr*, Expr*> build_validate_pi(
@@ -1069,10 +1070,9 @@ std::pair<Expr*, Expr*> build_validate_pi(
   return {nullptr, nullptr};
 }
 
-std::pair<Expr*, Expr*> build_macro(
-    std::vector<std::pair<Expr*, Expr*>>&& args,
-    Expr* ret,
-    Expr* ret_ty)
+std::pair<Expr*, Expr*> build_macro(std::vector<std::pair<Expr*, Expr*>>&& args,
+                                    Expr* ret,
+                                    Expr* ret_ty)
 {
   for (size_t i = args.size() - 1; i < args.size(); --i)
   {
@@ -1193,13 +1193,15 @@ void check_file(std::istream& in,
         {
           string id(prefix_id());
           DeclList decls = check_decl_list(true);
-          Expr * ret_kind;
-          Expr * ret = check(true, nullptr, &ret_kind);
+          Expr* ret_kind;
+          Expr* ret = check(true, nullptr, &ret_kind);
           for (const auto binding : decls.old_bindings)
           {
-            symbols->insert(get<0>(binding).c_str(), {get<1>(binding), get<2>(binding)});
+            symbols->insert(get<0>(binding).c_str(),
+                            {get<1>(binding), get<2>(binding)});
           }
-          pair<Expr *, Expr *> p = build_validate_pi(move(decls.decls), ret, ret_kind, true);
+          pair<Expr*, Expr*> p =
+              build_validate_pi(move(decls.decls), ret, ret_kind, true);
           p.second->dec();
           SymSExpr* s = new SymSExpr(id);
           pair<Expr*, Expr*> prev =
@@ -1217,9 +1219,11 @@ void check_file(std::istream& in,
           DeclList decls = check_decl_list(true);
           for (const auto binding : decls.old_bindings)
           {
-            symbols->insert(get<0>(binding).c_str(), {get<1>(binding), get<2>(binding)});
+            symbols->insert(get<0>(binding).c_str(),
+                            {get<1>(binding), get<2>(binding)});
           }
-          pair<Expr *, Expr *> p = build_validate_pi(move(decls.decls), statType, statKind, true);
+          pair<Expr*, Expr*> p =
+              build_validate_pi(move(decls.decls), statType, statKind, true);
           p.second->dec();
           SymSExpr* s = new SymSExpr(id);
           pair<Expr*, Expr*> prev =
@@ -1235,14 +1239,17 @@ void check_file(std::istream& in,
         {
           string id(prefix_id());
           DeclList decls = check_decl_list(true);
-          Expr * ret_ty;
-          Expr * ret = check(true, nullptr, &ret_ty);
-          pair<Expr *, Expr *> macro = build_macro(move(decls.decls), ret, ret_ty);
+          Expr* ret_ty;
+          Expr* ret = check(true, nullptr, &ret_ty);
+          pair<Expr*, Expr*> macro =
+              build_macro(move(decls.decls), ret, ret_ty);
           for (const auto binding : decls.old_bindings)
           {
-            symbols->insert(get<0>(binding).c_str(), {get<1>(binding), get<2>(binding)});
+            symbols->insert(get<0>(binding).c_str(),
+                            {get<1>(binding), get<2>(binding)});
           }
-          pair<Expr *, Expr *> prev = symbols->insert(id.c_str(), {macro.first, macro.second});
+          pair<Expr*, Expr*> prev =
+              symbols->insert(id.c_str(), {macro.first, macro.second});
           if (prev.first || prev.second)
           {
             rebind_error(id);
@@ -1278,7 +1285,7 @@ void check_file(std::istream& in,
             ascHoles.clear();
             computed->dec();
           }
-          else // CheckAssuming
+          else  // CheckAssuming
           {
             DeclList decls = check_decl_list(false);
             Expr* ex_type = check(true, statType, nullptr);

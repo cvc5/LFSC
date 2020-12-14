@@ -36,7 +36,7 @@ extern Span s_span;
 // Public interface
 Token::Token next_token();
 void reinsert_token(Token::Token t);
-const char * token_str();
+const char* token_str();
 
 void eat_token(Token::Token t);
 std::string prefix_id();
