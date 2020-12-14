@@ -79,6 +79,11 @@ std::pair<Expr*, Expr*> build_validate_pi(
     Expr* ret,
     Expr* ret_kind,
     bool create);
+std::pair<Expr*, Expr*> build_macro(
+    std::vector<std::pair<Expr*, Expr*>>&& args,
+    Expr* ret,
+    Expr* ret_ty,
+    bool create);
 
 void cleanup();
 

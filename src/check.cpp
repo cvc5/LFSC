@@ -323,30 +323,6 @@ start_check:
 
           goto start_check;
         }
-        case Token::Assuming:
-        {  // the case for assuming (multi-big-lambda)
-          if (expected || create || !return_pos || !big_check)
-            report_error(string("Big lambda abstractions can only be used")
-                         + string("in the return position of a \"bigcheck\"\n")
-                         + string("command."));
-          DeclList decls = check_decl_list(false);
-          for (const auto decl : decls.old_bindings)
-          {
-            Expr *prev = get<1>(decl), *prevtp = get<2>(decl);
-            // will clean up local sym name eventually
-            local_sym_names.push_back({get<0>(decl), {prev, prevtp}});
-            if (prev) prev->dec();
-            if (prevtp) prevtp->dec();
-          }
-          create = false;
-          expected = NULL;
-          // computed unchanged
-          is_hole = NULL;
-          // return_pos unchanged
-
-          // note we will not store the proper return type in computed.
-          goto start_check;
-        }
 
         case Token::ReverseSolidus:
         {  // the lambda case
@@ -1004,7 +980,7 @@ std::pair<std::string, Expr *> check_decl_list_item()
   if (t == Token::Open)
   {
     Token::Token t2 = next_token();
-    if (t2 == Token::Id)
+    if (t2 == Token::Colon)
     {
       string id(prefix_id());
       Expr * ty = check(true, statType);
@@ -1091,6 +1067,33 @@ std::pair<Expr*, Expr*> build_validate_pi(
     report_error(string("Invalid Pi-range: ") + ret->toString());
   }
   return {nullptr, nullptr};
+}
+
+std::pair<Expr*, Expr*> build_macro(
+    std::vector<std::pair<Expr*, Expr*>>&& args,
+    Expr* ret,
+    Expr* ret_ty)
+{
+  for (size_t i = args.size() - 1; i < args.size(); --i)
+  {
+    args[i].first->inc();
+    args[i].second->inc();
+    ret = new CExpr(PI, args[i].first, args[i].second, ret);
+    // Mark this as "cloned" to block no-clone optimization
+    ret->setcloned();
+    ret_ty = new CExpr(PI, args[i].first, args[i].second, ret_ty);
+    ret_ty->calc_free_in();
+    if (ret_ty->get_free_in())
+    {
+      std::ostringstream o;
+      o << "The type of an annotated lambda is dependent."
+        << "\n1. The type    : " << *ret_ty
+        << "\n2. The variable: " << *args[i].first
+        << "\n3. The body    : " << *ret;
+      report_error(o.str());
+    }
+  }
+  return {ret, ret_ty};
 }
 
 int check_time;
@@ -1228,29 +1231,65 @@ void check_file(std::istream& in,
           }
           break;
         }
-        case Token::Check:
+        case Token::DefineConst:
         {
+          string id(prefix_id());
+          DeclList decls = check_decl_list(true);
+          Expr * ret_ty;
+          Expr * ret = check(true, nullptr, &ret_ty);
+          pair<Expr *, Expr *> macro = build_macro(move(decls.decls), ret, ret_ty);
+          for (const auto binding : decls.old_bindings)
+          {
+            symbols->insert(get<0>(binding).c_str(), {get<1>(binding), get<2>(binding)});
+          }
+          pair<Expr *, Expr *> prev = symbols->insert(id.c_str(), {macro.first, macro.second});
+          if (prev.first || prev.second)
+          {
+            rebind_error(id);
+          }
+          break;
+        }
+        case Token::Check:
+        case Token::CheckAssuming:
+        {
+          // check and check-assuming combined case
           if (run_scc)
           {
             init_compiled_scc();
           }
-          Expr* computed;
-          big_check = true;
           int prev = open_parens;
-          (void)check(false, 0, &computed, NULL, true);
-
-          // print out ascription holes
-          for (int a = 0; a < (int)ascHoles.size(); a++)
+          if (c == Token::Check)
           {
+            Expr* computed;
+            big_check = true;
+            (void)check(false, 0, &computed, NULL, true);
+
+            // print out ascription holes
+            for (int a = 0; a < (int)ascHoles.size(); a++)
+            {
 #ifdef PRINT_SMT2
-            print_smt2(ascHoles[a], std::cout);
+              print_smt2(ascHoles[a], std::cout);
 #else
-            ascHoles[a]->print(std::cout);
+              ascHoles[a]->print(std::cout);
 #endif
-            std::cout << std::endl;
+              std::cout << std::endl;
+            }
+            if (!ascHoles.empty()) std::cout << std::endl;
+            ascHoles.clear();
+            computed->dec();
           }
-          if (!ascHoles.empty()) std::cout << std::endl;
-          ascHoles.clear();
+          else // CheckAssuming
+          {
+            DeclList decls = check_decl_list(false);
+            Expr* ex_type = check(true, statType, nullptr);
+            // consumes the `ex_type` reference
+            (void)check(false, ex_type, nullptr);
+            for (const auto binding : decls.old_bindings)
+            {
+              symbols->insert(get<0>(binding).c_str(),
+                              {get<1>(binding), get<2>(binding)});
+            }
+          }
 
           // clean up local symbols
           for (int a = 0; a < (int)local_sym_names.size(); a++)
@@ -1263,7 +1302,6 @@ void check_file(std::istream& in,
 
           eat_excess(prev);
 
-          computed->dec();
           // cleanup();
           // exit(0);
           break;

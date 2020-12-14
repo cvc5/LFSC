@@ -6,8 +6,8 @@
 (declare and (! a bool (! b bool bool)))
 
 (declare-rule pf_and
-              ((id a bool)
-               (id b bool)
+              ((: a bool)
+               (: b bool)
                (holds a)
                (holds b))
               (holds (and a b)))

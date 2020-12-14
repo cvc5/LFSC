@@ -72,12 +72,11 @@ comment     ;[^\n]*\n
 "provided"      return Token::Provided;
 "declare-rule"  return Token::DeclareRule;
 "declare-type"  return Token::DeclareType;
+"define-const"  return Token::DefineConst;
 "Forall"        return Token::Forall;
 "->"            return Token::Arrow;
 "lam"           return Token::Lam;
-"id"            return Token::Id;
-"proved-by"     return Token::ProvedBy;
-"assuming"      return Token::Assuming;
+"check-assuming" return Token::CheckAssuming;
 
 {markvar}       return Token::MarkVar;
 {ifmarked}      return Token::IfMarked;
@@ -163,10 +162,6 @@ Token::Token next_token()
       }
       case Token::Let: {
         t = Token::At;
-        break;
-      }
-      case Token::ProvedBy: {
-        t = Token::Colon;
         break;
       }
       default: break;

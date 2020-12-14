@@ -37,7 +37,7 @@ set(lfsc_test_file_list
   sugar_forall.plf
   sugar_lam.plf
   sugar_let.plf
-  sugar_proved_by.plf
+  sugar_define_const.plf
   sugar_provided.plf
 )
 

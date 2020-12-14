@@ -1,0 +1,24 @@
+; Sorts and terms:
+(declare sort type)
+(declare term type)
+
+; Theory holds: term t holds, where t should have Boolean type
+(declare holds (! t term type))
+
+; function constructor :
+(declare arrow (! s1 sort (! s2 sort sort)))
+
+; high-order apply :
+(declare apply (! t1 term (! t2 term term)))
+
+; Booleans :
+(declare true term)
+(declare false term)
+
+; Negation
+(declare f_not term)
+(define-const not ((: t term)) (apply f_not t))
+
+; Conjunction
+(declare f_and term)
+(define-const and ((: t1 term) (: t2 term)) (apply (apply f_not t1) t2))

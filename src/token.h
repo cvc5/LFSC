@@ -61,13 +61,12 @@ enum Token : int
   Provided,
   Forall,
   Lam,
-  ProvedBy,
   // Some are checked:
-  Id,
   DeclareRule,
+  DefineConst,
   DeclareType,
   Arrow,
-  Assuming,
+  CheckAssuming,
 
   TokenErr,
 
