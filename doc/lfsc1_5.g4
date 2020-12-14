@@ -17,8 +17,10 @@ command
   | '(' 'run' code ')'
   | '(' 'program' iden '(' typed_par+ ')' type code ')'
 // Extension /////////////////////////////////
-  | '(' 'declare-type' iden '(' type* ')' ')'
-  | '(' 'declare-rule' iden ( ntype | vtype )+ type ')' ')'
+  | '(' 'declare-type' iden decl_list ')'
+  | '(' 'declare-rule' iden decl_list type ')'
+  | '(' 'define-const' iden decl_list term ')'
+  | '(' 'check-assuming' decl_list type term ')'
 //////////////////////////////////////////////
   ;
 // (declare-type c (τ₁ ⋯ τᵢ)) with i > 0
@@ -32,6 +34,8 @@ command
 // (declare-rule r ν₁ ⋯ νᵢ τ)
 // is equivalent to
 // (declare r (-> r ν₁ ⋯ νᵢ τ))
+
+decl_list : '(' (ntype | vtype)* ')';
 
 iden : ID ;
 
@@ -78,7 +82,7 @@ ntype
 // (^ c t)
 
 // Extension /////////////////////
-vtype : '(' 'id' iden ntype ')' ;
+vtype : '(' ':' iden ntype ')' ;
 //////////////////////////////////
 
 type 
@@ -89,7 +93,7 @@ type
   | '(' '!' iden ntype type ')' 
 // Extension ///////////////////////////////
   | '(' 'Forall' iden ntype type ')' 
-  | '(' '->' '(' ( ntype | vtype )+ ')' type ')'  
+  | '(' '->' decl_list type ')'  
 ////////////////////////////////////////////
   ;
 // (Forall ξ τ₁ τ₂)
@@ -119,12 +123,11 @@ term
   | '(' '\\' iden term ')'
   | '(' '@' iden term term ')'
   | '(' ':' type term ')'
+  // Deprecated
   | '(' '%' iden type term ')'
 // Extensions ///////////////////
   | '(' 'lam' iden term ')'
   | '(' 'let' iden term term ')'
-  | '(' 'proved-by' type term ')'
-  | '(' 'assuming' '(' (ntype | vtype)+ ')' term ')'
   ;
 //////////////////////////////////
 // (lam ξ t)
