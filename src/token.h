@@ -56,7 +56,21 @@ enum Token : int
 
   Ident,
 
+  // Extension tokens.
+  // Some are desugared away:
+  Provided,
+  Forall,
+  Lam,
+  ProvedBy,
+  // Some are checked:
+  Id,
+  DeclareRule,
+  DeclareType,
+  Arrow,
+  Assuming,
+
   TokenErr,
+
 };
 
 std::ostream& operator<<(std::ostream& o, Token t);

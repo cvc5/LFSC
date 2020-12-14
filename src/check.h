@@ -50,6 +50,36 @@ void check_file(std::istream& in,
                 sccwriter* scw = NULL,
                 libwriter* lw = NULL);
 
+struct DeclList {
+  // The declarations: (symbol, type) pairs.
+  std::vector<std::pair<Expr *, Expr *>> decls;
+  // Old bindings to restore:
+  // (name, old value, old type).
+  std::vector<std::tuple<std::string, Expr *, Expr *>> old_bindings;
+};
+
+// Checks for a declaration list item.
+// Such items have two forms:
+//   (id NAME TYPE) -> (VarExpr(NAME), Expr(TYPE))
+//   TYPE           -> (nullpty      , Expr(TYPE))
+//
+// Returns a pair:
+//   the declared symbol         (name "_" if none)
+//   the type of the declaration
+std::pair<std::string, Expr *> check_decl_list_item();
+
+// Checks a list of declarations
+// e.g.
+//   ((id a bool) bool (id p (holds a)))
+// See DeclList structure
+DeclList check_decl_list(bool create);
+
+std::pair<Expr*, Expr*> build_validate_pi(
+    std::vector<std::pair<Expr*, Expr*>>&& args,
+    Expr* ret,
+    Expr* ret_kind,
+    bool create);
+
 void cleanup();
 
 

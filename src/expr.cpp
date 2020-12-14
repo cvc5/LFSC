@@ -404,7 +404,7 @@ bool Expr::defeq(Expr *e)
   /* we handle a few special cases up front, where this Expr might
      equal e, even though they have different opclass (i.e., different
      structure). */
-
+  // cerr << "defeq " << *e << "\n      " << *this << endl;
   if (this == e) return true;
   int op1 = getop();
   int op2 = e->getop();
@@ -854,8 +854,8 @@ void Expr::print(ostream &os) const
             else
             {
 #ifdef DEBUG_SYMS
-              os << e->s;
-              os << "[SYM ";
+              os << e;
+              os << "[value ";
 #endif
               e->val->print(os);
 #ifdef DEBUG_SYMS
@@ -865,6 +865,9 @@ void Expr::print(ostream &os) const
           }
           else
             os << e->s;
+#ifdef DEBUG_SYMS
+            os << "[" << e << "]";
+#endif
           break;
         }
         case HOLE_EXPR:

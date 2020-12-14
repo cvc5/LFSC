@@ -1,0 +1,28 @@
+(declare-type bool ())
+(declare tt bool)
+(declare ff bool)
+
+(declare-type holds (bool))
+(declare and (! a bool (! b bool bool)))
+
+(declare pf_and
+         (! a bool
+         (! b bool
+         (! a_pf (holds a)
+         (! b_pf (holds b)
+            (holds (and a b)))))))
+
+(check
+  (% a bool
+  (% b bool
+  (% pf_a (holds a)
+  (% pf_b (holds b)
+  (: (holds (and a b))
+     (pf_and a b pf_a pf_b)))))))
+(check
+  (% a bool
+  (% b bool
+  (% pf_a (holds a)
+  (% pf_b (holds b)
+  (: (holds (and a b))
+     (pf_and _ _ pf_a pf_b)))))))

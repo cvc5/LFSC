@@ -12,6 +12,7 @@
 #include "gmp.h"
 
 #define DEBUG_SYM_NAMES
+// Uncomment for verbose printing of symbols
 //#define DEBUG_SYMS
 
 // Expr class

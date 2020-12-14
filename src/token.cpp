@@ -48,6 +48,15 @@ std::ostream& operator<<(std::ostream& o, Token t)
     case Rational: return o << "Rational";
     case Ident: return o << "Ident";
     case TokenErr: return o << "TokenErr";
+    case Provided: return o << "Provided";
+    case Id: return o << "Id";
+    case DeclareRule: return o << "DeclareRule";
+    case DeclareType: return o << "DeclareType";
+    case Forall: return o << "Forall";
+    case Arrow: return o << "Arrow";
+    case Lam: return o << "Lam";
+    case ProvedBy: return o << "ProvedBy";
+    case Assuming: return o << "Assuming";
     default: return o << "Unknown Token: " << unsigned(t);
   }
 }

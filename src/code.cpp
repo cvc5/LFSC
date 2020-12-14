@@ -134,7 +134,7 @@ Expr *read_code()
 
           return new CExpr(FAIL, c);
         }
-        case Token::Let:
+        case Token::At:
         {
           string id(prefix_id());
           SymSExpr* var = new SymSExpr(id);

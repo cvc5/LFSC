@@ -69,6 +69,16 @@ comment     ;[^\n]*\n
 "("             return Token::Open;
 ")"             return Token::Close;
 
+"provided"      return Token::Provided;
+"declare-rule"  return Token::DeclareRule;
+"declare-type"  return Token::DeclareType;
+"Forall"        return Token::Forall;
+"->"            return Token::Arrow;
+"lam"           return Token::Lam;
+"id"            return Token::Id;
+"proved-by"     return Token::ProvedBy;
+"assuming"      return Token::Assuming;
+
 {markvar}       return Token::MarkVar;
 {ifmarked}      return Token::IfMarked;
 {natural}       return Token::Natural;
@@ -98,27 +108,70 @@ comment     ;[^\n]*\n
 std::string s_filename{};
 // Currrent lexer
 FlexLexer* s_lexer = nullptr;
-Token::Token s_peeked = Token::TokenErr;
+Token::Token s_peeked[2] = {Token::TokenErr, Token::TokenErr};
 Span s_span = {1,1,1,1};
+
 
 void reinsert_token(Token::Token t)
 {
-  assert(s_peeked == Token::TokenErr);
-  s_peeked = t;
+  //std::cerr << "Reinsert: " << t << std::endl;
+  if (s_peeked[0] == Token::TokenErr)
+  {
+    s_peeked[0] = t;
+  }
+  else if (s_peeked[1] == Token::TokenErr)
+  {
+    s_peeked[1] = s_peeked[0];
+    s_peeked[0] = t;
+  }
+  else
+  {
+    assert(false);
+  }
+}
+
+const char* token_str()
+{
+  return s_lexer->YYText();
 }
 
 Token::Token next_token()
 {
   Token::Token t;
-  if (s_peeked == Token::TokenErr)
+  if (s_peeked[0] == Token::TokenErr)
   {
     t = Token::Token(s_lexer->yylex());
   }
   else
   {
-    t = s_peeked;
-    s_peeked = Token::TokenErr;
+    t = s_peeked[0];
+    s_peeked[0] = s_peeked[1];
+    s_peeked[1] = Token::TokenErr;
   }
+    switch (t) {
+      case Token::Provided: {
+        t = Token::Caret;
+        break;
+      }
+      case Token::Forall: {
+        t = Token::Bang;
+        break;
+      }
+      case Token::Lam: {
+        t = Token::ReverseSolidus;
+        break;
+      }
+      case Token::Let: {
+        t = Token::At;
+        break;
+      }
+      case Token::ProvedBy: {
+        t = Token::Colon;
+        break;
+      }
+      default: break;
+    }
+    //std::cerr << "Token: " << t << " " << token_str() << std::endl;
   return t;
 }
 

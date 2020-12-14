@@ -29,13 +29,17 @@ std::ostream& operator<<(std::ostream& o, const Span& l);
 extern FlexLexer* s_lexer;
 // Name of current file
 extern std::string s_filename;
-extern Token::Token s_peeked;
+// buffer. 0 it first, then 1.
+extern Token::Token s_peeked[2];
 extern Span s_span;
 
+// Public interface
 Token::Token next_token();
+void reinsert_token(Token::Token t);
+const char * token_str();
+
 void eat_token(Token::Token t);
 std::string prefix_id();
-void reinsert_token(Token::Token t);
 void report_error(const std::string&);
 void unexpected_token_error(Token::Token t, const std::string& info);
 void init_s_span();

@@ -185,6 +185,28 @@ start_check:
             return 0;
           }
         }
+        case Token::Arrow:
+        {  // the arrow case
+          DeclList decls = check_decl_list(create);
+          Expr * ret_kind;
+          Expr * ret = check(create, nullptr, &ret_kind);
+          for (const auto binding : decls.old_bindings)
+          {
+            symbols->insert(get<0>(binding).c_str(), {get<1>(binding), get<2>(binding)});
+          }
+          eat_rparen();
+          auto p = build_validate_pi(move(decls.decls), ret, ret_kind, create);
+          if (expected)
+          {
+            //Checked by build-validate pi
+            p.second->dec();
+          }
+          else
+          {
+            *computed = p.second;
+          }
+          return p.first;
+        }
         case Token::Pound:
         {
           // Annotated lambda case
@@ -299,6 +321,30 @@ start_check:
 
           // note we will not store the proper return type in computed.
 
+          goto start_check;
+        }
+        case Token::Assuming:
+        {  // the case for assuming (multi-big-lambda)
+          if (expected || create || !return_pos || !big_check)
+            report_error(string("Big lambda abstractions can only be used")
+                         + string("in the return position of a \"bigcheck\"\n")
+                         + string("command."));
+          DeclList decls = check_decl_list(false);
+          for (const auto decl : decls.old_bindings)
+          {
+            Expr *prev = get<1>(decl), *prevtp = get<2>(decl);
+            // will clean up local sym name eventually
+            local_sym_names.push_back({get<0>(decl), {prev, prevtp}});
+            if (prev) prev->dec();
+            if (prevtp) prevtp->dec();
+          }
+          create = false;
+          expected = NULL;
+          // computed unchanged
+          is_hole = NULL;
+          // return_pos unchanged
+
+          // note we will not store the proper return type in computed.
           goto start_check;
         }
 
@@ -867,7 +913,7 @@ start_check:
       if (create)
       {
         mpz_t num;
-        if (mpz_init_set_str(num, s_lexer->YYText(), 10) == -1)
+        if (mpz_init_set_str(num, token_str(), 10) == -1)
           report_error("Error reading a numeral.");
         return new IntExpr(num);
       }
@@ -896,7 +942,7 @@ start_check:
       {
         mpq_t num;
         mpq_init(num);
-        if (mpq_set_str(num, s_lexer->YYText(), 10) == -1)
+        if (mpq_set_str(num, token_str(), 10) == -1)
           report_error("Error reading a numeral.");
         return new RatExpr(num);
       }
@@ -909,7 +955,7 @@ start_check:
     // (contextual) keyword identifiers
     default:
     {
-      string id(s_lexer->YYText());
+      string id(token_str());
       pair<Expr *, Expr *> p = symbols->get(id.c_str());
       Expr *ret = p.first;
       Expr *rettp = p.second;
@@ -950,6 +996,101 @@ start_check:
 
   report_error("Unexpected operator at the start of a term.");
   return 0;
+}
+
+std::pair<std::string, Expr *> check_decl_list_item()
+{
+  Token::Token t = next_token();
+  if (t == Token::Open)
+  {
+    Token::Token t2 = next_token();
+    if (t2 == Token::Id)
+    {
+      string id(prefix_id());
+      Expr * ty = check(true, statType);
+      eat_token(Token::Close);
+      return { id, ty };
+    }
+    else
+    {
+      reinsert_token(t2);
+      reinsert_token(t);
+      Expr * dummy;
+      Expr * ty = check(true, nullptr, &dummy);
+      dummy->dec();
+      return { "", ty };
+    }
+  }
+  else
+  {
+    reinsert_token(t);
+    Expr * ty = check(true, statType);
+    return { "", ty };
+  }
+}
+
+DeclList check_decl_list(const bool create)
+{
+  std::vector<std::tuple<std::string,Expr *, Expr *>> old_bindings;
+  std::vector<std::pair<Expr *, Expr *>> decls;
+  eat_token(Token::Open);
+  Token::Token t = next_token();
+  while (t != Token::Close)
+  {
+    reinsert_token(t);
+    std::pair<std::string, Expr *> p = check_decl_list_item();
+    Expr* sym;
+    if (p.first.size())
+    {
+#ifdef DEBUG_SYM_NAMES
+      sym = new SymSExpr(p.first, SYMS_EXPR);
+#else
+      sym = new SymExpr(p.first);
+#endif
+      auto o = symbols->insert(p.first.c_str(), { sym, p.second });
+      old_bindings.push_back({ p.first, o.first, o.second });
+    }
+    else
+    {
+      string id("_");
+#ifdef DEBUG_SYM_NAMES
+      sym = new SymSExpr(id, SYMS_EXPR);
+#else
+      sym = new SymExpr(id);
+#endif
+    }
+    if (create)
+    {
+      decls.emplace_back(sym, p.second);
+    }
+    t = next_token();
+  }
+  return { decls, old_bindings };
+}
+
+std::pair<Expr*, Expr*> build_validate_pi(
+    std::vector<std::pair<Expr*, Expr*>>&& args,
+    Expr* ret,
+    Expr* ret_kind,
+    bool create)
+{
+  if (ret_kind->getop() == TYPE || ret_kind->getop() == KIND)
+  {
+    if (create)
+    {
+      for (size_t i = args.size() - 1; i < args.size(); --i)
+      {
+        ret = new CExpr(PI, args[i].first, args[i].second, ret);
+        ret->calc_free_in();
+      }
+      return {ret, ret_kind};
+    }
+  }
+  else
+  {
+    report_error(string("Invalid Pi-range: ") + ret->toString());
+  }
+  return {nullptr, nullptr};
 }
 
 int check_time;
@@ -1039,6 +1180,48 @@ void check_file(std::istream& in,
           pair<Expr*, Expr*> prev =
               symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, t));
           if (lw) lw->add_symbol(s, t);
+          if (prev.first || prev.second)
+          {
+            rebind_error(id);
+          }
+          break;
+        }
+        case Token::DeclareRule:
+        {
+          string id(prefix_id());
+          DeclList decls = check_decl_list(true);
+          Expr * ret_kind;
+          Expr * ret = check(true, nullptr, &ret_kind);
+          for (const auto binding : decls.old_bindings)
+          {
+            symbols->insert(get<0>(binding).c_str(), {get<1>(binding), get<2>(binding)});
+          }
+          pair<Expr *, Expr *> p = build_validate_pi(move(decls.decls), ret, ret_kind, true);
+          p.second->dec();
+          SymSExpr* s = new SymSExpr(id);
+          pair<Expr*, Expr*> prev =
+              symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, p.first));
+          if (lw) lw->add_symbol(s, p.first);
+          if (prev.first || prev.second)
+          {
+            rebind_error(id);
+          }
+          break;
+        }
+        case Token::DeclareType:
+        {
+          string id(prefix_id());
+          DeclList decls = check_decl_list(true);
+          for (const auto binding : decls.old_bindings)
+          {
+            symbols->insert(get<0>(binding).c_str(), {get<1>(binding), get<2>(binding)});
+          }
+          pair<Expr *, Expr *> p = build_validate_pi(move(decls.decls), statType, statKind, true);
+          p.second->dec();
+          SymSExpr* s = new SymSExpr(id);
+          pair<Expr*, Expr*> prev =
+              symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, p.first));
+          if (lw) lw->add_symbol(s, p.first);
           if (prev.first || prev.second)
           {
             rebind_error(id);
@@ -1251,7 +1434,9 @@ void check_file(std::istream& in,
                                 Token::Opaque,
                                 Token::Run,
                                 Token::Check,
-                                Token::Program})
+                                Token::Program,
+                                Token::DeclareRule,
+                                Token::DeclareType})
           {
             msg << "\n\t" << t;
           }
