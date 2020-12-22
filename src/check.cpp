@@ -1076,14 +1076,10 @@ std::pair<Expr*, Expr*> build_macro(std::vector<std::pair<Expr*, Expr*>>&& args,
 {
   for (size_t i = args.size() - 1; i < args.size(); --i)
   {
-    args[i].first->inc();
     args[i].second->inc();
-    ret = new CExpr(PI, args[i].first, args[i].second, ret);
-    // Mark this as "cloned" to block no-clone optimization
-    ret->setcloned();
-    ret_ty = new CExpr(PI, args[i].first, args[i].second, ret_ty);
-    ret_ty->calc_free_in();
-    if (ret_ty->get_free_in())
+    CExpr* tmp = new CExpr(PI, args[i].first, args[i].second, ret_ty);
+    tmp->calc_free_in();
+    if (tmp->get_free_in())
     {
       std::ostringstream o;
       o << "The type of an annotated lambda is dependent."
@@ -1092,6 +1088,11 @@ std::pair<Expr*, Expr*> build_macro(std::vector<std::pair<Expr*, Expr*>>&& args,
         << "\n3. The body    : " << *ret;
       report_error(o.str());
     }
+    tmp->kids[0] = new SymSExpr(static_cast<SymSExpr*>(args[i].first)->s);
+    ret = new CExpr(LAM, args[i].first, ret);
+    // Mark this as "cloned" to block no-clone optimization
+    ret->setcloned();
+    ret_ty = tmp;
   }
   return {ret, ret_ty};
 }
@@ -1248,8 +1249,10 @@ void check_file(std::istream& in,
             symbols->insert(get<0>(binding).c_str(),
                             {get<1>(binding), get<2>(binding)});
           }
+          SymSExpr* s = new SymSExpr(id);
+          s->val = macro.first;
           pair<Expr*, Expr*> prev =
-              symbols->insert(id.c_str(), {macro.first, macro.second});
+              symbols->insert(id.c_str(), {s, macro.second});
           if (prev.first || prev.second)
           {
             rebind_error(id);
