@@ -113,7 +113,6 @@ Span s_span = {1,1,1,1};
 
 void reinsert_token(Token::Token t)
 {
-  //std::cerr << "Reinsert: " << t << std::endl;
   if (s_peeked[0] == Token::TokenErr)
   {
     s_peeked[0] = t;
@@ -166,7 +165,6 @@ Token::Token next_token()
       }
       default: break;
     }
-    //std::cerr << "Token: " << t << " " << token_str() << std::endl;
   return t;
 }
 
