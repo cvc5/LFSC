@@ -1517,7 +1517,8 @@ void check_file(std::istream& in,
                                 Token::Check,
                                 Token::Program,
                                 Token::DeclareRule,
-                                Token::DeclareType})
+                                Token::DeclareType,
+                                Token::DefineConst})
           {
             msg << "\n\t" << t;
           }
