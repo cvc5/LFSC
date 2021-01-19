@@ -73,7 +73,7 @@ comment     ;[^\n]*\n
 "declare-rule"  return Token::DeclareRule;
 "declare-type"  return Token::DeclareType;
 "define-const"  return Token::DefineConst;
-"Forall"        return Token::Forall;
+"forall"        return Token::Forall;
 "->"            return Token::Arrow;
 "lam"           return Token::Lam;
 "check-assuming" return Token::CheckAssuming;

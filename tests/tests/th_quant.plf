@@ -1,5 +1,5 @@
 ; Deps: smt.plf th_base.plf
-(declare forall (! s sort
+(declare forall_ (! s sort
                    (! t (term s)
                       (! f formula
                          formula))))
@@ -46,8 +46,8 @@
                 ((= s t1 t2) (match fi
                                     ((= s ti1 ti2) (match (is_inst_t ti1 t1 k) (tt (is_inst_t ti2 t2 k)) (ff ff)))
                                     (default ff)))
-                ((forall s t1 f1) (match fi
-                                         ((forall s ti1 fi1) (is_inst_f fi1 f1 k))
+                ((forall_ s t1 f1) (match fi
+                                         ((forall_ s ti1 fi1) (is_inst_f fi1 f1 k))
                                          (default ff)))
                 (default ff)))
 
@@ -60,7 +60,7 @@
          (! s sort
             (! t (term s)
                (! f formula
-                  (! p (th_holds (not (forall s t f)))
+                  (! p (th_holds (not (forall_ s t f)))
                      (! u (! k (term s)
                              (! fi formula
                                 (! p1 (th_holds (not fi))
@@ -74,7 +74,7 @@
                (! f formula
                   (! k (term s)
                      (! fi formula
-                        (! p (th_holds (forall s t f))
+                        (! p (th_holds (forall_ s t f))
                            (! r (^ (is_inst fi f t k) tt)
                               (! u (! p1 (th_holds fi)
                                       (holds cln))
