@@ -2,4 +2,4 @@
 (declare tt bool)
 (declare ff bool)
 
-(declare holds (forall b bool type))
+(declare holds (pi b bool type))
