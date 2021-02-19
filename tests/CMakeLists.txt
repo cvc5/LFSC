@@ -30,6 +30,16 @@ set(lfsc_test_file_list
   use-bool.plf
   use-use-bool.plf
   whr-match.plf
+  sugar_arrow.plf
+  sugar_assuming.plf
+  sugar_declare_rule.plf
+  sugar_declare_type.plf
+  sugar_forall.plf
+  sugar_lam.plf
+  sugar_let.plf
+  sugar_define_const.plf
+  sugar_provided.plf
+  sugar_skolem.plf
 )
 
 set(test_script ${CMAKE_CURRENT_LIST_DIR}/run_test.py)

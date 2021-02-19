@@ -50,6 +50,75 @@ void check_file(std::istream& in,
                 sccwriter* scw = NULL,
                 libwriter* lw = NULL);
 
+struct DeclList
+{
+  // The declarations: (symbol, type) pairs.
+  std::vector<std::pair<Expr*, Expr*>> decls;
+  // Old bindings to restore:
+  // (name, old value, old type).
+  // Necessary because, for each (symbol, type) pair in the `decls`, we bind
+  // `symbol` to `type` in the enviroment, possibly overwriting the prior
+  // binding for `symbol`. This member contains the information needed to
+  // restore the binding.
+  std::vector<std::tuple<std::string, Expr*, Expr*>> old_bindings;
+};
+
+// Checks for a declaration list item.
+// Such items have two forms:
+//   (:  NAME TYPE) -> (VarExpr(NAME), Expr(TYPE))
+//   TYPE           -> (nullpty      , Expr(TYPE))
+//
+// Returns a pair:
+//   the name of the declared symbol ("" if no name)
+//   the type of the declaration     (TYPE in the above)
+std::pair<std::string, Expr*> check_decl_list_item();
+
+// Checks a list of declarations
+// e.g.
+//   ((: a bool) bool (: p (holds a)))
+// Returns a list of (symbol, type) bindings ("_" is the symbol for
+// declarations which are anonymous), binding those symbols in the enviroment
+// as it does.  Also returns a list of old bindings.
+//
+// See DeclList structure documentation for the details of the return value.
+//
+// If create is not set, then we return an empty list of declarations.
+// The old bindings are still returned.
+DeclList check_decl_list(bool create);
+
+// Builds an validates a nested PI expression.
+//
+// E.g., from (a bool) (b bool) ..., it builds (! a bool (! b bool ...))
+//
+// Parameters:
+// * `args`: a (symbol, type) list. Each member corresponds to one PI in the
+// nest.
+// * `ret`: the body of the innermost PI
+// * `ret_kind`: the type of the innermost PI
+// * `create`: whether to acutally build the body of the constructed PI
+//             (the type of the PI is always constructed)
+// Returns:
+// * The body of the constructed PI
+// * The type of the constructed PI (which is just the ret_kind, it turns out)
+//
+// Note:
+// Checks that the PI's return kind is TYPE or KIND. Otherwise, throws an error.
+std::pair<Expr*, Expr*> build_validate_pi(
+    std::vector<std::pair<Expr*, Expr*>>&& args,
+    Expr* ret,
+    Expr* ret_kind,
+    bool create);
+
+// Builds and validates a nested macro (LAM) expression.
+// Very similar to the above, except:
+// * Always constructs the body of the nested LAM.
+// * Checks that each layer of the type of the nested LAM (which is a nested
+//   PI) is not dependent.
+std::pair<Expr*, Expr*> build_macro(std::vector<std::pair<Expr*, Expr*>>&& args,
+                                    Expr* ret,
+                                    Expr* ret_ty,
+                                    bool create);
+
 void cleanup();
 
 

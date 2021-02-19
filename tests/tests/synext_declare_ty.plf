@@ -1,0 +1,7 @@
+(declare-type bool)
+(declare tt bool)
+(declare ff bool)
+
+(declare-type holds bool)
+
+(declare pf_true (holds tt))

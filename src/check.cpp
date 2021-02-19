@@ -185,6 +185,29 @@ start_check:
             return 0;
           }
         }
+        case Token::Arrow:
+        {  // the arrow case
+          DeclList decls = check_decl_list(create);
+          Expr* ret_kind;
+          Expr* ret = check(create, nullptr, &ret_kind);
+          for (const auto binding : decls.old_bindings)
+          {
+            symbols->insert(get<0>(binding).c_str(),
+                            {get<1>(binding), get<2>(binding)});
+          }
+          eat_rparen();
+          auto p = build_validate_pi(move(decls.decls), ret, ret_kind, create);
+          if (expected)
+          {
+            // Checked by build-validate pi
+            p.second->dec();
+          }
+          else
+          {
+            *computed = p.second;
+          }
+          return p.first;
+        }
         case Token::Pound:
         {
           // Annotated lambda case
@@ -867,7 +890,7 @@ start_check:
       if (create)
       {
         mpz_t num;
-        if (mpz_init_set_str(num, s_lexer->YYText(), 10) == -1)
+        if (mpz_init_set_str(num, token_str(), 10) == -1)
           report_error("Error reading a numeral.");
         return new IntExpr(num);
       }
@@ -896,7 +919,7 @@ start_check:
       {
         mpq_t num;
         mpq_init(num);
-        if (mpq_set_str(num, s_lexer->YYText(), 10) == -1)
+        if (mpq_set_str(num, token_str(), 10) == -1)
           report_error("Error reading a numeral.");
         return new RatExpr(num);
       }
@@ -909,7 +932,7 @@ start_check:
     // (contextual) keyword identifiers
     default:
     {
-      string id(s_lexer->YYText());
+      string id(token_str());
       pair<Expr *, Expr *> p = symbols->get(id.c_str());
       Expr *ret = p.first;
       Expr *rettp = p.second;
@@ -950,6 +973,152 @@ start_check:
 
   report_error("Unexpected operator at the start of a term.");
   return 0;
+}
+
+std::pair<std::string, Expr*> check_decl_list_item()
+{
+  Token::Token t = next_token();
+  if (t == Token::Open)
+  {
+    Token::Token t2 = next_token();
+    if (t2 == Token::Colon)
+    {
+      // The (: NAME TYPE) case
+      string id(prefix_id());
+      Expr* ty = check(true, statType);
+      eat_token(Token::Close);
+      return {id, ty};
+    }
+    else
+    {
+      // This is a TYPE case, that starts with tokens: '(' and t2, where t2 is
+      // not `:`.
+      // We reinsert those tokens to the stream, and check TYPE.
+      reinsert_token(t2);
+      reinsert_token(t);
+      Expr* dummy;
+      Expr* ty = check(true, nullptr, &dummy);
+      dummy->dec();
+      return {"", ty};
+    }
+  }
+  else
+  {
+    // This is a TYPE case, that starts with token: '('.
+    // We reinsert it an check TYPE.
+    reinsert_token(t);
+    Expr* ty = check(true, statType);
+    return {"", ty};
+  }
+}
+
+DeclList check_decl_list(const bool create)
+{
+  std::vector<std::tuple<std::string, Expr*, Expr*>> old_bindings;
+  std::vector<std::pair<Expr*, Expr*>> decls;
+  // Eat opening '('
+  eat_token(Token::Open);
+  Token::Token t = next_token();
+  // While the list is unclosed
+  while (t != Token::Close)
+  {
+    // Another item in the declaration list.
+    reinsert_token(t);
+    // Get the (ident, type) pair of the item.
+    std::pair<std::string, Expr*> p = check_decl_list_item();
+    Expr* sym;
+    // Check whether this declaration binds an identifier (has non-empty ident)
+    if (p.first.size())
+    {
+      // It does. Create the symbol, bind it, save the old binding.
+#ifdef DEBUG_SYM_NAMES
+      sym = new SymSExpr(p.first, SYMS_EXPR);
+#else
+      sym = new SymExpr(p.first);
+#endif
+      auto o = symbols->insert(p.first.c_str(), {sym, p.second});
+      old_bindings.push_back({p.first, o.first, o.second});
+    }
+    else
+    {
+      // It does not. Create a "_" symbol. Do not bind it.
+      string id("_");
+#ifdef DEBUG_SYM_NAMES
+      sym = new SymSExpr(id, SYMS_EXPR);
+#else
+      sym = new SymExpr(id);
+#endif
+    }
+    // If creating, save this (symbol, type) pair in the list.
+    if (create)
+    {
+      decls.emplace_back(sym, p.second);
+    }
+    t = next_token();
+  }
+  // We've closed the list
+  return {decls, old_bindings};
+}
+
+std::pair<Expr*, Expr*> build_validate_pi(
+    std::vector<std::pair<Expr*, Expr*>>&& args,
+    Expr* ret,
+    Expr* ret_kind,
+    bool create)
+{
+  // Check that the resulting kind is TYPE or KIND
+  if (ret_kind->getop() == TYPE || ret_kind->getop() == KIND)
+  {
+    if (create)
+    {
+      // If we should create the body, do so.
+      for (size_t i = args.size() - 1; i < args.size(); --i)
+      {
+        ret = new CExpr(PI, args[i].first, args[i].second, ret);
+        ret->calc_free_in();
+      }
+      return {ret, ret_kind};
+    }
+  }
+  else
+  {
+    report_error(string("Invalid Pi-range: ") + ret->toString());
+  }
+  // We're not creating the body.
+  return {nullptr, ret_kind};
+}
+
+std::pair<Expr*, Expr*> build_macro(std::vector<std::pair<Expr*, Expr*>>&& args,
+                                    Expr* ret,
+                                    Expr* ret_ty)
+{
+  // For each argument, add a layer of nesting.
+  for (size_t i = args.size() - 1; i < args.size(); --i)
+  {
+    args[i].second->inc();
+    CExpr* tmp = new CExpr(PI, args[i].first, args[i].second, ret_ty);
+    tmp->calc_free_in();
+    // Assert that the type is not dependent.
+    if (tmp->get_free_in())
+    {
+      std::ostringstream o;
+      o << "The type of an annotated lambda is dependent."
+        << "\n1. The type    : " << *ret_ty
+        << "\n2. The variable: " << *args[i].first
+        << "\n3. The body    : " << *ret;
+      report_error(o.str());
+    }
+    // Replace the symbol in the type with a copy, so that there isn't "same
+    // symbol" confusion between the value and the type.
+    // This doesn't break any references to the symbol, because there are no
+    // reference to the symbol in the type---it's not dependent!
+    tmp->kids[0] = new SymSExpr(static_cast<SymSExpr*>(args[i].first)->s);
+    ret = new CExpr(LAM, args[i].first, ret);
+    // Mark this as "cloned" to block no-clone optimization
+    ret->setcloned();
+    ret_ty = tmp;
+  }
+  return {ret, ret_ty};
 }
 
 int check_time;
@@ -1045,29 +1214,125 @@ void check_file(std::istream& in,
           }
           break;
         }
-        case Token::Check:
+        case Token::DeclareRule:
         {
+          // Form: (declare-rule NAME DECL_LIST RESULT)
+          // equivalent to: (declare NAME (! decl0id decl0ty (! decl1id decl1ty ... RESULT)))
+          string id(prefix_id());
+          DeclList decls = check_decl_list(true);
+          Expr* ret_kind;
+          Expr* ret = check(true, nullptr, &ret_kind);
+          // Restore bindings overwritten by decl list
+          for (const auto binding : decls.old_bindings)
+          {
+            symbols->insert(get<0>(binding).c_str(),
+                            {get<1>(binding), get<2>(binding)});
+          }
+          pair<Expr*, Expr*> p =
+              build_validate_pi(move(decls.decls), ret, ret_kind, true);
+          p.second->dec();
+          SymSExpr* s = new SymSExpr(id);
+          pair<Expr*, Expr*> prev =
+              symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, p.first));
+          if (lw) lw->add_symbol(s, p.first);
+          if (prev.first || prev.second)
+          {
+            rebind_error(id);
+          }
+          break;
+        }
+        case Token::DeclareType:
+        {
+          // Form: (declare-type NAME DECL_LIST)
+          // equivalent to: (declare NAME (! decl0id decl0ty (! decl1id decl1ty ... type)))
+          string id(prefix_id());
+          DeclList decls = check_decl_list(true);
+          // Restore bindings overwritten by decl list
+          for (const auto binding : decls.old_bindings)
+          {
+            symbols->insert(get<0>(binding).c_str(),
+                            {get<1>(binding), get<2>(binding)});
+          }
+          pair<Expr*, Expr*> p =
+              build_validate_pi(move(decls.decls), statType, statKind, true);
+          p.second->dec();
+          SymSExpr* s = new SymSExpr(id);
+          pair<Expr*, Expr*> prev =
+              symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, p.first));
+          if (lw) lw->add_symbol(s, p.first);
+          if (prev.first || prev.second)
+          {
+            rebind_error(id);
+          }
+          break;
+        }
+        case Token::DefineConst:
+        {
+          // Form: (define-const NAME DECL_LIST RESULT)
+          // equivalent to: (define NAME (% decl0id decl0ty (% decl1id decl1ty ... RESULT)))
+          string id(prefix_id());
+          DeclList decls = check_decl_list(true);
+          Expr* ret_ty;
+          Expr* ret = check(true, nullptr, &ret_ty);
+          pair<Expr*, Expr*> macro =
+              build_macro(move(decls.decls), ret, ret_ty);
+          // Restore bindings overwritten by decl list
+          for (const auto binding : decls.old_bindings)
+          {
+            symbols->insert(get<0>(binding).c_str(),
+                            {get<1>(binding), get<2>(binding)});
+          }
+          SymSExpr* s = new SymSExpr(id);
+          s->val = macro.first;
+          pair<Expr*, Expr*> prev =
+              symbols->insert(id.c_str(), {s, macro.second});
+          if (prev.first || prev.second)
+          {
+            rebind_error(id);
+          }
+          break;
+        }
+        case Token::Check:
+        case Token::CheckAssuming:
+        {
+          // check and check-assuming combined case
           if (run_scc)
           {
             init_compiled_scc();
           }
-          Expr* computed;
-          big_check = true;
           int prev = open_parens;
-          (void)check(false, 0, &computed, NULL, true);
-
-          // print out ascription holes
-          for (int a = 0; a < (int)ascHoles.size(); a++)
+          if (c == Token::Check)
           {
+            Expr* computed;
+            big_check = true;
+            (void)check(false, 0, &computed, NULL, true);
+
+            // print out ascription holes
+            for (int a = 0; a < (int)ascHoles.size(); a++)
+            {
 #ifdef PRINT_SMT2
-            print_smt2(ascHoles[a], std::cout);
+              print_smt2(ascHoles[a], std::cout);
 #else
-            ascHoles[a]->print(std::cout);
+              ascHoles[a]->print(std::cout);
 #endif
-            std::cout << std::endl;
+              std::cout << std::endl;
+            }
+            if (!ascHoles.empty()) std::cout << std::endl;
+            ascHoles.clear();
+            computed->dec();
           }
-          if (!ascHoles.empty()) std::cout << std::endl;
-          ascHoles.clear();
+          else  // CheckAssuming
+          {
+            DeclList decls = check_decl_list(false);
+            Expr* ex_type = check(true, statType, nullptr);
+            // consumes the `ex_type` reference
+            (void)check(false, ex_type, nullptr);
+            for (const auto binding : decls.old_bindings)
+            {
+              symbols->insert(get<0>(binding).c_str(),
+                              {get<1>(binding), get<2>(binding)});
+            }
+          }
 
           // clean up local symbols
           for (int a = 0; a < (int)local_sym_names.size(); a++)
@@ -1080,7 +1345,6 @@ void check_file(std::istream& in,
 
           eat_excess(prev);
 
-          computed->dec();
           // cleanup();
           // exit(0);
           break;
@@ -1251,7 +1515,10 @@ void check_file(std::istream& in,
                                 Token::Opaque,
                                 Token::Run,
                                 Token::Check,
-                                Token::Program})
+                                Token::Program,
+                                Token::DeclareRule,
+                                Token::DeclareType,
+                                Token::DefineConst})
           {
             msg << "\n\t" << t;
           }

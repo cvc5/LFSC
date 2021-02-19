@@ -12,7 +12,7 @@
 (define = (# t1 term (# t2 term (apply (apply f_= t1) t2))))
 (declare var (! v mpz (! s sort term)))
 (declare bvar (! v mpz (! s sort term)))
-(declare forall (! v mpz (! s sort term)))
+(declare forall_ (! v mpz (! s sort term)))
 (declare witness (! v mpz (! s sort term)))
 (declare map_to_witness (! k term (! w term type)))
 (declare Ok type)
@@ -40,7 +40,7 @@
                      (! v mpz
                      (! s sort
 		     (! goal term
-                     (! p (holds (not (apply (forall v s) body)))
+                     (! p (holds (not (apply (forall_ v s) body)))
 		     (! u (! v' mpz
 		          (! r (map_to_witness (var v' s) (apply (witness v s)
 		               (not body)))
@@ -52,7 +52,7 @@
                      (! s sort
                      (! bodyi term
 		     (! k term
-                     (! p (holds (not (apply (forall v s) body)))
+                     (! p (holds (not (apply (forall_ v s) body)))
 		     (! u (map_to_witness k (apply (witness v s) (not body)))
                      (! r (^ (substitute body v k) bodyi)
 		     (holds (not bodyi)))))))))))
@@ -63,7 +63,7 @@
 
 (check
 (% p1 (holds (not (= a b)))
-(% p2 (holds (not (apply (forall 7 U) (not (and (= a (bvar 7 U)) (= (bvar 7 U) b))))))
+(% p2 (holds (not (apply (forall_ 7 U) (not (and (= a (bvar 7 U)) (= (bvar 7 U) b))))))
 (: (holds false)
   (mk_skolemize _ _ _ _ p2
     (\ v' (\ r

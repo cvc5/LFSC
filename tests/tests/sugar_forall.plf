@@ -1,0 +1,5 @@
+(declare bool type)
+(declare tt bool)
+(declare ff bool)
+
+(declare holds (pi b bool type))
