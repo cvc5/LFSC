@@ -1,6 +1,7 @@
 #include "code.h"
 #include <cstddef>
 #include <string>
+#include <sstream>
 #include "check.h"
 #include "token.h"
 #include "lexer.h"
@@ -387,9 +388,23 @@ Expr *check_code(Expr *_e)
       {
         tp = ((CExpr *)h)->kids[0];
       }
-      else
+      else if (h->getclass() == SYMS_EXPR)
       {
         tp = symbols->get(((SymSExpr *)h)->s.c_str()).second;
+      }
+      else if (e->kids[0]->getclass() == SYMS_EXPR)
+      {
+        // The head is not a symbol.
+        // Perhaps it is a macro? If so, it is a symbol whose values
+        // we've determined with the above "followDefs".
+        // Let's try backing up to the underlying symbol.
+        tp = symbols->get(((SymSExpr *)e->kids[0])->s.c_str()).second;
+      }
+      else {
+        ostringstream s;
+        s << "An application's head is neither a program nor symbol";
+        s << "\n1. The application: " << *e;
+        report_error(s.str());
       }
 
       if (!tp)

@@ -1,0 +1,579 @@
+; Sorts and terms:
+(declare sort type)
+(declare term type)
+
+; Theory holds: term t holds, where t should have Boolean type
+(declare holds (! t term type))
+
+; function constructor :
+(declare arrow (! s1 sort (! s2 sort sort)))
+
+; high-order apply :
+(declare apply (! t1 term (! t2 term term)))
+
+; Booleans :
+(declare true term)
+(declare false term)
+
+; Negation
+(declare f_not term)
+(define not (# t term (apply f_not t)))
+
+; Conjunction
+(declare f_and term)
+(define and (# t1 term (# t2 term (apply (apply f_and t1) t2))))
+
+; Disjunction
+(declare f_or term)
+(define or (# t1 term (# t2 term (apply (apply f_or t1) t2))))
+
+; Implication
+(declare f_=> term)
+(define => (# t1 term (# t2 term (apply (apply f_=> t1) t2))))
+
+; Xor
+(declare f_xor term)
+(define xor (# t1 term (# t2 term (apply (apply f_xor t1) t2))))
+
+; ITE
+(declare f_ite (! s sort term))
+(define ite (# s sort (# condition term (# then_branch term (# else_branch term (apply (apply (apply (f_ite s) condition) then_branch) else_branch))))))
+
+; Equality:
+; f_= is an equality symbol, which is a term, to be used with an apply
+(declare f_=  term)
+; this macro enables writing (= t1 t2)
+(define = (# t1 term (# t2 term (apply (apply f_= t1) t2))))
+
+; Disequality:
+; f_distinct is a disequality symbol, which is a term, to be used with an apply
+(declare f_distinct term)
+; this macro enables writing (distinct t1 t2)
+(define distinct (# t1 term (# t2 term (apply (apply f_distinct t1) t2))))
+
+
+; Free constants :
+(declare var (! v mpz (! s sort term)))
+
+; BOUND_VARIABLE, i.e. a variable
+(declare bvar (! v mpz (! s sort term)))
+
+; Quantifiers : 
+; universals
+(declare f_forall (! v mpz (! s sort term)))
+(define forall (# v mpz (# s sort (# t term (apply (f_forall v s) t)))))
+
+; existentials
+(declare f_exists (! v mpz (! s sort term)))
+(define exists (# v mpz (# s sort (# t term (apply (f_exists v s) t)))))
+
+; witness
+(declare f_witness (! v mpz (! s sort term)))
+(define witness (# v mpz (# s sort (# t term (apply (f_witness v s) t)))))
+
+; w must be a witness (verify in typechecking or whatever)
+(declare skolem (! w term term))
+
+;;;; To write (forall ((x Int)) (P x)):
+; (apply (forall v Int) (apply P (bvar v Int)))
+
+; proof-let
+(declare plet (! f term (! g term (! p (holds g) (! u (! v (holds g) (holds f)) (holds f))))))
+; scope, where note that this assumes f is in n-ary, null-terminated form
+(declare scope (! f term (! g term (! u (! v (holds g) (holds f)) (holds (or (not g) f))))))
+; trust
+(declare trust (! f term (holds f)))
+(declare flag type)
+(declare tt flag)
+(declare ff flag)
+
+(declare Ok type)
+(declare ok Ok)
+
+; remove the first occurrence of l from t, where t is an n-ary, null-terminated chain
+(program nary_rm_first ((f term) (t term) (l term)) term
+  (match t
+    ((apply t1 t2)  ; otherwise at end, l not found
+      (match t1
+        ((apply f t12) (ifequal t12 l t2 (apply t1 (nary_rm_first f t2 l)))))))   ; otherwise not in n-ary form (for f)
+)
+
+; also checks t == l, return nt if so, where nt is a null terminator
+(program nary_rm_first_or_self ((f term) (t term) (l term) (nt term)) term
+  (ifequal t l nt (nary_rm_first f t l))
+)
+
+; does t contain l? where t is an n-ary, null-terminated chain
+(program nary_ctn ((f term) (t term) (l term)) flag
+  (match t
+    ((apply t1 t2)
+      (match t1
+        ((apply f t12) (ifequal t12 l tt (nary_ctn f t2 l)))))   ; otherwise not in n-ary form
+    (default ff))
+)
+
+; also checks t == l
+(program nary_ctn_or_self ((f term) (t term) (l term)) flag
+  (ifequal t l tt (nary_ctn f t l))
+)
+
+; returns true if n-ary null-terminated chain t is a subset of s, interpreted as sets
+(program nary_is_subset ((f term) (t term) (s term)) flag
+  (match t
+    ((apply t1 t2) 
+      (match t1
+        ((apply f t12) (ifequal (nary_ctn_or_self f s t12) tt (nary_is_subset f t2 s) ff)))) ; otherwise not in n-ary form
+    (default tt))
+)
+
+(program nary_concat ((f term) (t1 term) (t2 term)) term
+  (match t1
+    ((apply f t12) (apply f (nary_concat f t12 t2)))
+    (default t2))    ; any non-application term is interpreted as the end marker
+)
+
+; replaces e.g. (or P false) with P
+(program nary_singleton_elim ((f term) (t term) (null term)) term
+  (match t
+    ((apply t1 t2) 
+      ; if null terminated at this level, then we return the head, otherwise not in n-ary form
+      (ifequal t2 null (match t1 ((apply f t12) t12)) t))
+    (default t))
+)
+
+; extract the n^th child of n-ary chain of operator f
+(program nary_extract ((f term) (t term) (n mpz)) term
+  (match t
+    ((apply t1 t2)
+      (mp_ifzero n 
+        (match t1 ((apply f t12) t12))
+        (nary_extract f t2 (mp_add n (mp_neg 1)))
+      )))
+)
+; sorts :
+(declare Bool sort)
+(declare Int sort)
+(declare Real sort)
+(declare String sort)
+(declare RegLan sort)
+
+;Arith:
+(declare int (! v mpz term))
+(declare f_int.+ term)
+(define int.+ (# x term (# y term (apply (apply f_int.+ x) y))))
+(declare f_int.- term)
+(define int.- (# x term (# y term (apply (apply f_int.- x) y))))
+(declare f_int.* term)
+(define int.* (# x term (# y term (apply (apply f_int.* x) y))))
+(declare f_int.> term)
+(define int.> (# x term (# y term (apply (apply f_int.> x) y))))
+(declare f_int.>= term)
+(define int.>= (# x term (# y term (apply (apply f_int.>= x) y))))
+(declare f_int.< term)
+(define int.< (# x term (# y term (apply (apply f_int.< x) y))))
+(declare f_int.<= term)
+(define int.<= (# x term (# y term (apply (apply f_int.<= x) y))))
+
+; Strings
+(declare emptystr term)
+(declare char (! v mpz term))
+(declare f_str.len term)
+(define str.len (# x term (apply f_str.len x)))
+(declare f_str.++ term)
+(define str.++ (# x term (# y term (apply (apply f_str.++ x) y))))
+(declare f_str.substr term)
+(define str.substr (# x term (# y term (# z term (apply (apply (apply f_str.substr x) y) z)))))
+(declare f_str.contains term)
+(define str.contains (# x term (# y term (apply (apply f_str.contains x) y))))
+(declare f_str.replace term)
+(define str.replace (# x term (# y term (# z term (apply (apply (apply f_str.replace x) y) z)))))
+(declare f_str.indexof term)
+(define str.indexof (# x term (# y term (# z term (apply (apply (apply f_str.indexof x) y) z)))))
+(declare f_str.prefixof term)
+(define str.prefixof (# x term (# y term (apply (apply f_str.prefixof x) y))))
+(declare f_str.suffixof term)
+(define str.suffixof (# x term (# y term (apply (apply f_str.suffixof x) y))))
+; Regular expressions
+(declare re.allchar term)
+(declare re.none term)
+(declare re.all term)
+(declare f_str.to_re term)
+(define str.to_re (# x term (apply f_str.to_re x)))
+(declare f_re.* term)
+(define re.* (# x term (apply f_re.* x)))
+(declare f_re.comp term)
+(define re.comp (# x term (apply f_re.comp x)))
+(declare f_re.range term)
+(define re.range (# x term (# y term (apply (apply f_re.range x) y))))
+(declare f_re.++ term)
+(define re.++ (# x term (# y term (apply (apply f_re.++ x) y))))
+(declare f_re.inter term)
+(define re.inter (# x term (# y term (apply (apply f_re.inter x) y))))
+(declare f_re.union term)
+(define re.union (# x term (# y term (apply (apply f_re.union x) y))))
+(declare f_re.loop (! n1 mpz (! n2 mpz term)))
+(define re.loop (# n1 mpz (# n2 mpz (# x term (apply (f_re.loop n1 n2) x)))))
+; membership
+(declare f_str.in_re term)
+(define str.in_re (# x term (# y term (apply (apply f_str.in_re x) y))))
+
+
+
+
+
+
+
+
+;  // ======== CNF And Neg
+;  // Children: ()
+;  // Arguments: ((and f1 ... Fn))
+;  // ---------------------
+;  // Conclusion: (or (and f1 ... Fn) (not f1) ... (not Fn))
+;  CNF_AND_NEG,
+
+; Note that all rules below add the null terminator "false" to the conclusion of or
+
+(declare cnf_and_pos (! f1 term (! f2 term (! n mpz (! r (^ (nary_extract f_and f1 n) f2) (holds (or (not f1) (or f2 false))))))))
+(declare cnf_or_pos (! f term (holds (or (not f) (or f false)))))
+(declare cnf_or_neg (! f1 term (! f2 term (! n mpz (! r (^ (nary_extract f_or f1 n) f2) (holds (or f1 (or (not f2) false))))))))
+
+(declare cnf_implies_pos (! f1 term (! f2 term (holds (or (not (=> f1 f2)) (or (not f1) (or f2 false)))))))
+(declare cnf_implies_neg1 (! f1 term (! f2 term (holds (or (=> f1 f2) (or f1 false))))))
+(declare cnf_implies_neg2 (! f1 term (! f2 term (holds (or (=> f1 f2) (or (not f2) false))))))
+
+(declare cnf_equiv_pos1 (! f1 term (! f2 term (holds (or (not (= f1 f2)) (or (not f1) (or f2 false)))))))
+(declare cnf_equiv_pos2 (! f1 term (! f2 term (holds (or (not (= f1 f2)) (or f1 (or (not f2) false)))))))
+(declare cnf_equiv_neg1 (! f1 term (! f2 term (holds (or (= f1 f2) (or f1 (or f2 false)))))))
+(declare cnf_equiv_neg2 (! f1 term (! f2 term (holds (or (= f1 f2) (or (not f1) (or (not f2) false)))))))
+
+(declare cnf_xor_pos1 (! f1 term (! f2 term (holds (or (not (xor f1 f2)) (or f1 (or f2 false)))))))
+(declare cnf_xor_pos2 (! f1 term (! f2 term (holds (or (not (xor f1 f2)) (or (not f1) (or (not f2) false)))))))
+(declare cnf_xor_neg1 (! f1 term (! f2 term (holds (or (xor f1 f2) (or (not f1) (or f2 false)))))))
+(declare cnf_xor_neg2 (! f1 term (! f2 term (holds (or (xor f1 f2) (or f1 (or (not f2) false)))))))
+
+(declare cnf_ite_pos1 (! c term (! f1 term (! f2 term (holds (or (not ((ite Bool) c f1 f2)) (or (not c) (or f1 false))))))))
+(declare cnf_ite_pos2 (! c term (! f1 term (! f2 term (holds (or (not ((ite Bool) c f1 f2)) (or c (or f2 false))))))))
+(declare cnf_ite_pos3 (! c term (! f1 term (! f2 term (holds (or (not ((ite Bool) c f1 f2)) (or f1 (or f2 false))))))))
+(declare cnf_ite_neg1 (! c term (! f1 term (! f2 term (holds (or ((ite Bool) c f1 f2) (or (not c) (or (not f1) false))))))))
+(declare cnf_ite_neg2 (! c term (! f1 term (! f2 term (holds (or ((ite Bool) c f1 f2) (or c (or (not f2) false))))))))
+(declare cnf_ite_neg3 (! c term (! f1 term (! f2 term (holds (or ((ite Bool) c f1 f2) (or (not f1) (or (not f2) false))))))))
+; depends: nary_programs.plf
+
+; currently trusts that c1 and c2 are OR chains, although this is not checked
+(program sc_resolution ((c1 term) (c2 term) (pol flag) (l term)) term
+  (nary_singleton_elim f_or
+    (nary_concat f_or
+      (nary_rm_first_or_self f_or c1 (ifequal pol tt l (apply f_not l)) false) 
+      (nary_rm_first_or_self f_or c2 (ifequal pol tt (apply f_not l) l) false)) 
+    false)
+)
+ 
+ 
+; (and F1 ... Fn) -> (or (not F1) ... (not Fn))
+(program sc_not_and_rec ((t term)) term
+  (match t
+    ((apply t1 t2)
+      (match t1
+        ((apply f_and t12) (apply (apply f_or (apply f_not t12)) (sc_not_and_rec t2)))))   ; otherwise not in n-ary form
+    (true false))    ; note we must flip true to false
+)
+
+(program sc_not_and ((t term)) term
+  (nary_singleton_elim f_or (sc_not_and_rec t) false)
+)
+
+; (or (not F1) ... (not Fn)) -> (and F1 ... Fn)
+(program sc_not_and_rev_rec ((t term)) term
+  (match t
+    ((apply t1 t2)
+      (match t1
+        ((apply f_or t12) 
+          (match t12 
+            ((apply f_not t122) (apply (apply f_and t122) (sc_not_and_rev_rec t2)))))))   ; otherwise not in n-ary form
+    (false true))    ; note we must flip true to false
+)
+
+
+(program sc_not_and_rev ((t term)) term
+  (nary_singleton_elim f_and (sc_not_and_rev_rec t) true)
+)
+
+;- --- SAT layer
+
+; Resolution and reordering
+(declare resolution (! c1 term (! c2 term (! c term (! p1 (holds c1) (! p2 (holds c2) (! pol flag (! l term (! r (^ (sc_resolution c1 c2 pol l) c) (holds c))))))))))
+(declare reordering (! c1 term (! c2 term (! p1 (holds c1) (! r (^ (nary_is_subset f_or c1 c2) tt) (holds c2))))))
+
+; --- miscellaneous Boolean
+
+(declare split (! f term (holds (or f (or (not f) false)))))
+
+(declare eq_resolve (! f term (! g term (! p1 (holds f) (! p2 (holds (= f g)) (holds g))))))
+
+(declare modus_ponens (! f term (! g term (! p1 (holds f) (! p2 (holds (=> f g)) (holds g))))))
+
+(declare not_not_elim (! f term (! p (holds (not (not f))) (holds f))))
+
+(declare contra (! f term (! p1 (holds f) (! p2 (holds (not f)) (holds false)))))
+  
+; for AND_ELIM
+; End with left child, (and_elim1 _ _ (and_elim2* _ _))
+; TODO: use nary_extract
+(declare and_elim1 (! f1 term (! f2 term (! p (holds (and f1 f2)) (holds f1)))))
+(declare and_elim2 (! f1 term (! f2 term (! p (holds (and f1 f2)) (holds f2)))))
+
+; for AND_INTRO
+; Start with null terminator, (and_intro2* _ _ (and_intro1 _))
+(declare and_intro1 (! f term (! p (holds f) (holds (and f true)))))
+(declare and_intro2 (! f1 term (! f2 term (! p1 (holds f1) (! p2 (holds f2) (holds (and f1 f2)))))))
+
+(declare not_or_elim (! f1 term (! f2 term (! n mpz (! p (holds (not f1)) (! r (^ (nary_extract f_or f1 n) f2) (holds (not f2))))))))
+
+(declare implies_elim (! f1 term (! f2 term (! p1 (holds (=> f1 f2)) (holds (or (not f1) (or f2 false)))))))
+(declare not_implies_elim1 (! f1 term (! f2 term (! p1 (holds (not (=> f1 f2))) (holds f1)))))
+(declare not_implies_elim2 (! f1 term (! f2 term (! p1 (holds (not (=> f1 f2))) (holds (not f2))))))
+
+  
+; note that we require adding the null terminator to the end
+(declare equiv_elim1 (! f1 term (! f2 term (! p1 (holds (= f1 f2)) (holds (or (not f1) (or f2 false)))))))
+(declare equiv_elim2 (! f1 term (! f2 term (! p1 (holds (= f1 f2)) (holds (or f1 (or (not f2) false)))))))
+(declare not_equiv_elim1 (! f1 term (! f2 term (! p1 (holds (not (= f1 f2))) (holds (or f1 (or f2 false)))))))
+(declare not_equiv_elim2 (! f1 term (! f2 term (! p1 (holds (not (= f1 f2))) (holds (or (not f1) (or (not f2) false)))))))
+
+
+(declare xor_elim1 (! f1 term (! f2 term (! p1 (holds (xor f1 f2)) (holds (or f1 (or f2 false)))))))
+(declare xor_elim2 (! f1 term (! f2 term (! p1 (holds (xor f1 f2)) (holds (or (not f1) (or (not f2) false)))))))
+(declare not_xor_elim1 (! f1 term (! f2 term (! p1 (holds (not (xor f1 f2))) (holds (or f1 (or (not f2) false)))))))
+(declare not_xor_elim2 (! f1 term (! f2 term (! p1 (holds (not (xor f1 f2))) (holds (or (not f1) (or f2 false)))))))
+
+
+(declare ite_elim1 (! c term (! f1 term (! f2 term (! p1 (holds ((ite Bool) c f1 f2)) (holds (or (not c) (or f1 false))))))))
+(declare ite_elim2 (! c term (! f1 term (! f2 term (! p1 (holds ((ite Bool) c f1 f2)) (holds (or c (or f2 false))))))))
+(declare not_ite_elim1 (! c term (! f1 term (! f2 term (! p1 (holds (not ((ite Bool) c f1 f2))) (holds (or (not c) (or (not f1) false))))))))
+(declare not_ite_elim2 (! c term (! f1 term (! f2 term (! p1 (holds (not ((ite Bool) c f1 f2))) (holds (or c (or (not f2) false))))))))
+
+
+; DeMorgan rule
+(declare not_and (! c1 term (! c2 term (! p1 (holds (not c1)) (! r (^ (sc_not_and c1) c2) (holds c2))))))
+; needed for SCOPE
+(declare not_and_rev (! c1 term (! c2 term (! p1 (holds c1) (! r (^ (sc_not_and_rev c1) c2) (holds (not c2)))))))
+; Type checking:
+
+; Return the sort of term t, (fail sort) means not well-sorted
+(program type_check ((t term)) sort
+  (match t
+    ; [1] uninterpreted function symbol
+    ((var n s) s)
+    ((bvar n s) s)
+    ((skolem w) (type_check w))
+    ((apply t1 t2)
+      (match t1
+        ; [2] parametric interpreted function symbols. Note these must have
+        ; exceptions in well_typed below.
+        (f_= (arrow (type_check t2) Bool))
+
+        ; ...
+        ; [3] function applications of non-parametric function symbols
+        (default 
+          (match (type_check t1)
+            ; must be an application of function
+            ((arrow sarg sreturn) 
+                (ifequal (type_check t2) sarg 
+                  sreturn 
+                  ; fail: function applied to terms of different sorts
+                  (fail sort)))))))
+    
+    ; [4] quantifiers are indexed by their universal variable
+    ((f_forall n s) (arrow Bool Bool))
+    ((f_exists n s) (arrow Bool Bool))
+    ((f_witness n s) (arrow Bool s))
+
+    ; [5] all non-parametric interpreted function symbols
+    ; Arithmetic
+    ((int n) Int)
+    (f_int.+ (arrow Int (arrow Int Int)))
+    (f_int.- (arrow Int (arrow Int Int)))
+    (f_int.* (arrow Int (arrow Int Int)))
+    (f_int.< (arrow Int (arrow Int Bool)))
+    (f_int.<= (arrow Int (arrow Int Bool)))
+    (f_int.> (arrow Int (arrow Int Bool)))
+    (f_int.>= (arrow Int (arrow Int Bool)))
+    ; Booleans
+    (true Bool)
+    (false Bool)
+    ((f_ite s) (arrow Bool (arrow s (arrow s s))))
+    (f_and (arrow Bool (arrow Bool Bool)))
+    (f_or (arrow Bool (arrow Bool Bool)))
+    (f_=> (arrow Bool (arrow Bool Bool)))
+    (f_xor (arrow Bool (arrow Bool Bool)))
+    (f_not (arrow Bool Bool))
+    ; Strings
+    (emptystr String)
+    ((char n) String)
+    (f_str.len (arrow String Int))
+    (f_str.++ (arrow String (arrow String String)))
+    (f_str.substr (arrow String (arrow Int (arrow Int String))))
+    (f_str.contains (arrow String (arrow String Bool)))
+    (f_str.replace (arrow String (arrow String (arrow String String))))
+    (f_str.indexof (arrow String (arrow String (arrow Int Int))))
+    (f_str.prefixof (arrow String (arrow String Bool)))
+    (f_str.suffixof (arrow String (arrow String Bool)))
+    (re.allchar RegLan)
+    (re.none RegLan)
+    (re.all RegLan)
+    (f_re.* (arrow RegLan RegLan))
+    (f_re.comp (arrow RegLan RegLan))
+    (f_re.range (arrow String (arrow String RegLan)))
+    (f_re.++ (arrow RegLan (arrow RegLan RegLan)))
+    (f_str.to_re (arrow String RegLan))
+    (f_re.inter (arrow RegLan (arrow RegLan RegLan)))
+    (f_re.union (arrow RegLan (arrow RegLan RegLan)))
+    ((f_re.loop n1 n2) (arrow RegLan RegLan))
+    (f_str.in_re (arrow String (arrow RegLan Bool)))
+    
+    ; ...
+    ; fail: unknown term
+  )
+)
+(program well_typed ((t term)) Ok
+  (match t
+    ; special case: the equality symbol itself is well-typed
+    (f_= ok)
+    (default 
+      (do (type_check t) ok))))
+; Congruence :
+
+(declare refl (! t term
+              (! r (^ (well_typed t) ok)
+	(holds (= t t)))))
+
+(declare symm (! s term
+        (! t term
+        (! u (holds (= s t))
+        (holds (= t s))))))
+
+(declare neg_symm (! s term
+        (! t term
+        (! u (holds (not (= s t)))
+        (holds (not (= t s)))))))
+
+(declare trans (! t1 term
+        (! t2 term
+        (! t3 term
+        (! u1 (holds (= t1 t2))
+        (! u2 (holds (= t2 t3))
+        (holds (= t1 t3))))))))
+
+(declare cong (! a1 term
+              (! b1 term
+              (! a2 term
+              (! b2 term
+              (! u1 (holds (= a1 b1))
+              (! u2 (holds (= a2 b2))
+              (! t (^ (well_typed (apply a1 a2)) ok)
+                (holds (= (apply a1 a2) (apply b1 b2)))))))))))
+
+(declare true_intro (! f term
+                    (! u (holds f)
+                    (holds (= f true)))))
+
+(declare true_elim (! f term
+                   (! u (holds (= f true))
+                   (holds f))))
+
+(declare false_intro (! f term
+                    (! u (holds (not f))
+                    (holds (= f false)))))
+
+(declare false_elim (! f term
+                   (! u (holds (= f false))
+                   (holds (not f)))))
+
+
+; head and tail for n-ary operators with null terminators
+(program str.head ((t term)) term
+  (match t ((apply t1 t2) (match t1 ((apply f_str.++ t12) t12)))))
+(program str.tail ((t term)) term
+  (match t ((apply f_str.++ t2) t2)))
+
+;t = x, s=y ---> (str.++ x y)
+;t = (str.++ x1 x2), s = y1 ----> (str.++ x1 (str.++ x2 y1))
+;t = (str.++ (str.++ x1 x2) (str.++ y1 y2)), s=y ----> (str.++ (str.++ (str.++ (str.++ x1 x2) y1) y2) y)
+(program str.concat ((t term) (s term)) term
+  (match t 
+    ((apply t1 t2)
+      (match t1 ((apply f_str.++ t12) (apply t1 (str.concat t2 s)))))
+    (emptystr s))
+)
+
+
+(program fun ((t term) (s term)) term
+         (and t s)
+         )
+
+(declare and_pf
+              (! a term
+              (! b term
+              (! c term
+              (! a_pf (holds a)
+              (! b_pf (holds b)
+              (! sc (^ (fun a b) c)
+                 (holds c))))))))
+
+(check-assuming
+  ((: a term)
+   (: b term)
+   (: a_pf (holds a))
+   (: b_pf (holds b)))
+  (holds (and a b))
+  (and_pf _ _ _ a_pf b_pf))
+
+    
+    
+;(program sc_string_reduction ((t term) (k term)) term
+;  (match t 
+;    ((apply t1 t2)
+;      (match t1
+;        ((apply t11 t12)
+;          (match t11
+;            ((apply f_str.substr t112)
+;              ;    // processing term:  substr( s, n, m )
+;              ;    // IF    n >=0 AND n < len( s ) AND m > 0
+;              ;    // THEN: s = k1 ++ k ++ k2 AND
+;              ;    //       len( k1 ) = n AND
+;              ;    //       ( len( k2 ) = len( s )-(n+m) OR len( k2 ) = 0 ) AND
+;              ;    //       len( k ) <= m
+;              ;    // ELSE: k = ""
+;              (let k1 (skolem (int 0)) ; TODO
+;              (let k2 (skolem (int 1)) ; TODO
+;              (ite Bool 
+;                (and (apply (apply f_int.>= t12) (int 0)) 
+;                  (and (apply (apply f_int.< t12) (apply f_str.len t112)) 
+;                    (and (apply (apply f_int.> t2) (int 0)) 
+;                      true)))
+;                (and (= t112 (str.++ k1 (str.++ k (str.++ k2 emptystr))))
+;                  (and (= (apply f_str.len k1) t12)
+;                    (and 
+;                      (or (= (apply f_str.len k2) (int.- (apply f_str.len t112) (int.+ t12 (int.+ t2 (int 0)))))
+;                           (or (= (apply f_str.len k2) (int 0)) 
+;                            false))
+;                      (and (int.<= (apply f_str.len k) t2) true))))
+;                (= k emptystr)
+;              ))))
+;            (f_str.contains true)  ; TODO
+;            ((apply f_str.indexof t112) true)
+;            ((apply f_str.replace t112) true)
+;            
+;            ; str.update
+;            ; str.from_int
+;            ; str.to_int
+;            ; seq.nth
+;            ; str.replaceall
+;            ; str.replace_re
+;            ; str.replace_re_all
+;            ; str.tolower
+;            ; str.toupper
+;            ; str.rev
+;            ; str.leq
+;  )))))
+;)
