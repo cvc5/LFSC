@@ -1,0 +1,35 @@
+; Sorts and terms:
+(declare sort type)
+(declare term type)
+
+; Theory holds: term t holds, where t should have Boolean type
+(declare holds (! t term type))
+
+; high-order apply :
+(declare apply (! t1 term (! t2 term term)))
+
+; Conjunction
+(declare f_and term)
+(define and (# t1 term (# t2 term (apply (apply f_and t1) t2))))
+
+(program fun ((t term) (s term)) term
+         (and t s)
+         )
+
+(declare and_pf
+              (! a term
+              (! b term
+              (! c term
+              (! a_pf (holds a)
+              (! b_pf (holds b)
+              (! sc (^ (fun a b) c)
+                 (holds c))))))))
+
+(check-assuming
+  ((: a term)
+   (: b term)
+   (: a_pf (holds a))
+   (: b_pf (holds b)))
+  (holds (and a b))
+  (and_pf _ _ _ a_pf b_pf))
+
