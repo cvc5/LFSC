@@ -41,6 +41,8 @@ set(lfsc_test_file_list
   sugar_provided.plf
   sugar_skolem.plf
   code_macro_app.plf
+  macro_in_let_in_sc.plf
+  sc_call_in_macro_in_sc.plf
 )
 
 set(test_script ${CMAKE_CURRENT_LIST_DIR}/run_test.py)
