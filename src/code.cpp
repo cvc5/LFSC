@@ -1127,15 +1127,6 @@ start_run_code:
     }
     case APP:
     {
-      Expr *tmp = e->whr();
-      if (e != tmp)
-      {
-        _e = tmp;
-        goto start_run_code;
-      }
-
-      // e is in weak head normal form
-
       vector<Expr *> args;
       Expr *hd = e->collect_args(args);
       for (int i = 0, iend = args.size(); i < iend; i++)
