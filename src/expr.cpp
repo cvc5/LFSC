@@ -36,7 +36,7 @@ bool destroy_progs = false;
   {                                           \
     Expr *r = rr;                             \
     int ref = r->data >> 9;                   \
-    ref = ref - 1;                            \
+    ref = ref < 4194303 ? ref - 1 : ref;      \
     if (ref == 0)                             \
     {                                         \
       _e = r;                                 \

@@ -149,7 +149,7 @@ class Expr
   inline void dec(bool dec_kids = true)
   {
     int ref = getrefcnt();
-    ref = ref - 1;
+    ref = ref < 4194303 ? ref - 1 : ref;
 #ifdef DEBUG_REFCNT
     debugrefcnt(ref, DEC);
 #endif
