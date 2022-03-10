@@ -11,6 +11,8 @@ using namespace std;
 
 int HoleExpr::next_id = 0;
 int Expr::markedCount = 0;
+// Maximum reference count, 2^22-1
+int Expr::d_maxRefCount = 4194303;
 
 C_MACROS__ADD_CHUNKING_MEMORY_MANAGEMENT_CC(CExpr, kids, 32768);
 
@@ -31,19 +33,19 @@ void Expr::debug()
 
 bool destroy_progs = false;
 
-#define destroydec(rr)                        \
-  do                                          \
-  {                                           \
-    Expr *r = rr;                             \
-    int ref = r->data >> 9;                   \
-    ref = ref - 1;                            \
-    if (ref == 0)                             \
-    {                                         \
-      _e = r;                                 \
-      goto start_destroy;                     \
-    }                                         \
-    else                                      \
-      r->data = (ref << 9) | (r->data & 511); \
+#define destroydec(rr)                         \
+  do                                           \
+  {                                            \
+    Expr *r = rr;                              \
+    int ref = r->data >> 9;                    \
+    ref = ref < d_maxRefCount ? ref - 1 : ref; \
+    if (ref == 0)                              \
+    {                                          \
+      _e = r;                                  \
+      goto start_destroy;                      \
+    }                                          \
+    else                                       \
+      r->data = (ref << 9) | (r->data & 511);  \
   } while (0)
 
 // removed from below "ref = ref -1;":   r->debugrefcnt(ref,DEC);

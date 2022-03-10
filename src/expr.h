@@ -133,13 +133,7 @@ class Expr
   inline void inc()
   {
     int ref = getrefcnt();
-    // static int iCounter = 0;
-    // iCounter++;
-    // if( iCounter%10000==0 ){
-    //   //print( std::cout );
-    //   std::cout << " " << ref << std::endl;
-    //}
-    ref = ref < 4194303 ? ref + 1 : ref;
+    ref = ref < d_maxRefCount ? ref + 1 : ref;
 #ifdef DEBUG_REFCNT
     debugrefcnt(ref, INC);
 #endif
@@ -149,7 +143,7 @@ class Expr
   inline void dec(bool dec_kids = true)
   {
     int ref = getrefcnt();
-    ref = ref - 1;
+    ref = ref < d_maxRefCount ? ref - 1 : ref;
 #ifdef DEBUG_REFCNT
     debugrefcnt(ref, DEC);
 #endif
@@ -214,6 +208,9 @@ class Expr
 
   static int cargCount;
   static int fiCounter;
+private:
+  /** The maximum reference count value, 2^22-1. */
+  static int d_maxRefCount;
 };
 
 class CExpr : public Expr
