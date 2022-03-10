@@ -11,6 +11,7 @@ using namespace std;
 
 int HoleExpr::next_id = 0;
 int Expr::markedCount = 0;
+// Maximum reference count, 2^22-1
 int Expr::d_maxRefCount = 4194303;
 
 C_MACROS__ADD_CHUNKING_MEMORY_MANAGEMENT_CC(CExpr, kids, 32768);
