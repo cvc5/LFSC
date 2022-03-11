@@ -160,7 +160,6 @@ class Expr
   {
     return getclass() == SYMS_EXPR || getop() == MPZ || getop() == MPQ;
   }
-  inline bool isArithTerm() const { return getop() == ADD || getop() == NEG; }
   inline bool isSymbolic() const
   {
     return getclass() == SYM_EXPR || getclass() == SYMS_EXPR;

@@ -4,6 +4,8 @@ set(lfsc_test_file_list
   bool.plf
   eq_mpz.plf
   issue20.plf
+  issue59.plf
+  issue60.plf
   issue8-mpexp.plf
   formal_type_args.plf
   mp_prefix.plf
