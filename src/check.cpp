@@ -423,65 +423,50 @@ start_check:
                          + string(" a disallowed position."));
 
           Expr *code = read_code();
-          // string errstr = (string("The first argument in a run expression
-          // must be")
-          //   +string(" a call to a program.\n1. the argument: ")
-          //   +code->toString());
 
           /* determine expected type of the result term, and make sure
              the code term is an allowed one. */
-#if 0
-      Expr *progret;
-      if (code->isArithTerm())
-        progret = statMpz;
-      else {
-        if (code->getop() != APP)
-          report_error(errstr);
-
-        CExpr *call = (CExpr *)code;
-
-        // prog is not known to be a SymExpr yet
-        CExpr *prog = (CExpr *)call->get_head();
-
-        if (prog->getop() != PROG)
-          report_error(errstr);
-
-        progret = prog->kids[0]->get_body();
-      }
-#else
-          Expr *progret = NULL;
+          Expr *progret = nullptr;
           if (code->isArithTerm())
-            progret = statMpz;
-          else
           {
-            if (code->getop() == APP)
+            progret = statMpz;
+          }
+          else if (code->getop() == APP)
+          {
+            CExpr *call = (CExpr *)code;
+
+            // prog is not known to be a SymExpr yet
+            CExpr *prog = (CExpr *)call->get_head();
+
+            if (prog->getop() == PROG)
             {
-              CExpr *call = (CExpr *)code;
-
-              // prog is not known to be a SymExpr yet
-              CExpr *prog = (CExpr *)call->get_head();
-
-              if (prog->getop() == PROG) progret = prog->kids[0]->get_body();
+              progret = prog->kids[0]->get_body();
             }
           }
-#endif
+          if (progret==nullptr)
+          {
+            report_error(
+                std::string("Could not determine how to run code ")
+                + code->toString());
+          }
           /* determine expected type of the result term, and make sure
                   the code term is an allowed one. */
-          // Expr* progret = check_code( code );
 
           /* the next term cannot be a hole where run expressions are
              introduced. When they are checked in applications, it can be. */
           int prev = open_parens;
-          if (progret) progret->inc();
+          progret->inc();
           Expr *trm = check(true, progret);
           eat_excess(prev);
           eat_rparen();
 
           if (expected->getop() != TYPE)
+          {
             report_error(
                 string("The expected type for a run expression is not ")
                 + string("\"type\".\n") + string("1. The expected type: ")
                 + expected->toString());
+          }
           expected->dec();
           return new CExpr(RUN, code, trm);
         }
