@@ -1041,10 +1041,12 @@ start_run_code:
       if (r1 < r2)
       {
         r1->dec();
+        r2->dec();
         _e = e->kids[2];
         goto start_run_code;
       }
       // else
+      r1->dec();
       r2->dec();
       _e = e->kids[3];
       goto start_run_code;
