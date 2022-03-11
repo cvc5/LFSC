@@ -554,15 +554,17 @@ Expr *check_code(Expr *_e)
 
       SymSExpr *tp1 = (SymSExpr *)check_code(e->kids[1]);
       SymSExpr *tp2 = (SymSExpr *)check_code(e->kids[2]);
-      if (tp1->getclass() != SYMS_EXPR || tp1->val || tp1 != tp2)
+      if (tp1 != tp2)
+      {
         report_error(
             string("\"mp_if\" used with expressions that do not ")
-            + string("have equal simple datatypes\nfor their types.\n")
+            + string("have equal datatypes\nfor their types.\n")
             + string("0. 0'th expression: ") + e->kids[0]->toString()
             + string("\n1. first expression: ") + e->kids[1]->toString()
             + string("\n2. second expression: ") + e->kids[2]->toString()
             + string("\n3. first expression's type: ") + tp1->toString()
             + string("\n4. second expression's type: ") + tp2->toString());
+      }
       return tp1;
     }
 

@@ -424,25 +424,8 @@ start_check:
 
           Expr *code = read_code();
 
-          /* determine expected type of the result term, and make sure
-             the code term is an allowed one. */
-          Expr *progret = nullptr;
-          if (code->isArithTerm())
-          {
-            progret = statMpz;
-          }
-          else if (code->getop() == APP)
-          {
-            CExpr *call = (CExpr *)code;
-
-            // prog is not known to be a SymExpr yet
-            CExpr *prog = (CExpr *)call->get_head();
-
-            if (prog->getop() == PROG)
-            {
-              progret = prog->kids[0]->get_body();
-            }
-          }
+          // compute the type of the left hand side of the run statement
+          Expr *progret = check_code(code);
           if (progret==nullptr)
           {
             report_error(
