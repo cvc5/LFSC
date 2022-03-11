@@ -38,9 +38,7 @@ class libwriter;
 
 void init();
 
-void check_file(const char *_filename,
-                args a,
-                sccwriter *scw = nullptr);
+void check_file(const char* _filename, args a, sccwriter* scw = nullptr);
 
 void check_file(std::istream& in,
                 const std::string& filename,
