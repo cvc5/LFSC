@@ -40,14 +40,12 @@ void init();
 
 void check_file(const char *_filename,
                 args a,
-                sccwriter *scw = NULL,
-                libwriter *lw = NULL);
+                sccwriter *scw = nullptr);
 
 void check_file(std::istream& in,
                 const std::string& filename,
                 args a,
-                sccwriter* scw = NULL,
-                libwriter* lw = NULL);
+                sccwriter* scw = nullptr);
 
 struct DeclList
 {

@@ -32,7 +32,7 @@ void lfscc_check_file(std::istream& in,
                       bool compile_scc_debug,
                       bool run_scc,
                       bool use_nested_app,
-                      sccwriter* scw,)
+                      sccwriter* scw)
 {
   args a;
   a.show_runs = show_runs;
