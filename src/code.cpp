@@ -633,7 +633,7 @@ Expr *check_code(Expr *_e)
       {
         report_error(
             string("\"ifmarked\" used with expressions that do not ")
-            + string("have equal simple datatypes\nfor their types.\n")
+            + string("have equal datatypes\nfor their types.\n")
             + string("0. 0'th expression: ") + e->kids[1]->toString()
             + string("\n1. first expression: ") + e->kids[2]->toString()
             + string("\n2. second expression: ") + e->kids[3]->toString()
@@ -685,8 +685,8 @@ Expr *check_code(Expr *_e)
     }
     case IFEQUAL:
     {
-      SymSExpr *tp0 = (SymSExpr *)check_code(e->kids[0]);
-      SymSExpr *tp1 = (SymSExpr *)check_code(e->kids[1]);
+      Expr *tp0 = check_code(e->kids[0]);
+      Expr *tp1 = check_code(e->kids[1]);
 
       if (tp0 != tp1)
       {
