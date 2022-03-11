@@ -552,8 +552,8 @@ Expr *check_code(Expr *_e)
             + string("1. the argument: ") + e->kids[0]->toString()
             + string("\n1. its type: ") + tp0->toString());
 
-      SymSExpr *tp1 = (SymSExpr *)check_code(e->kids[1]);
-      SymSExpr *tp2 = (SymSExpr *)check_code(e->kids[2]);
+      Expr *tp1 = check_code(e->kids[1]);
+      Expr *tp2 = check_code(e->kids[2]);
       if (tp1 != tp2)
       {
         report_error(
