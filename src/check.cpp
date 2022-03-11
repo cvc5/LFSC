@@ -16,7 +16,6 @@
 #include <time.h>
 #include <stack>
 #include <utility>
-#include "print_smt2.h"
 #include "scccode.h"
 
 using namespace std;
@@ -1310,11 +1309,7 @@ void check_file(std::istream& in,
             // print out ascription holes
             for (int a = 0; a < (int)ascHoles.size(); a++)
             {
-#ifdef PRINT_SMT2
-              print_smt2(ascHoles[a], std::cout);
-#else
               ascHoles[a]->print(std::cout);
-#endif
               std::cout << std::endl;
             }
             if (!ascHoles.empty()) std::cout << std::endl;
