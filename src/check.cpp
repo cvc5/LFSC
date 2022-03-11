@@ -1536,6 +1536,8 @@ void check_file(std::istream& in,
       unexpected_token_error(c, "Top-level commands must start with parentheses");
     }
   }
+  
+  delete s_lexer;
 }
 
 class Deref : public Trie<pair<Expr *, Expr *> >::Cleaner
