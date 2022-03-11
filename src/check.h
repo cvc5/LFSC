@@ -29,7 +29,6 @@ typedef struct args
   bool compile_scc_debug;
   bool run_scc;
   bool use_nested_app;
-  bool compile_lib;
 } args;
 
 extern int check_time;
@@ -39,16 +38,12 @@ class libwriter;
 
 void init();
 
-void check_file(const char *_filename,
-                args a,
-                sccwriter *scw = NULL,
-                libwriter *lw = NULL);
+void check_file(const char* _filename, args a, sccwriter* scw = nullptr);
 
 void check_file(std::istream& in,
                 const std::string& filename,
                 args a,
-                sccwriter* scw = NULL,
-                libwriter* lw = NULL);
+                sccwriter* scw = nullptr);
 
 struct DeclList
 {
