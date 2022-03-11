@@ -3,7 +3,6 @@ set(srcfiles
     code.cpp
     expr.cpp
     lfscc.cpp
-    libwriter.cpp
     print_smt2.cpp
     scccode.cpp
     sccwriter.cpp

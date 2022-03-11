@@ -29,7 +29,6 @@ typedef struct args
   bool compile_scc_debug;
   bool run_scc;
   bool use_nested_app;
-  bool compile_lib;
 } args;
 
 extern int check_time;

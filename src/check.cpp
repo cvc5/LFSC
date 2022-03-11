@@ -6,7 +6,6 @@
 
 #include "code.h"
 #include "expr.h"
-#include "libwriter.h"
 #include "sccwriter.h"
 #include "trie.h"
 #ifndef _MSC_VER

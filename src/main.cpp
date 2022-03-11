@@ -4,7 +4,6 @@
 #include "check.h"
 #include "expr.h"
 #include "token.h"
-#include "libwriter.h"
 #include "sccwriter.h"
 
 using namespace std;
@@ -62,12 +61,6 @@ static void parse_args(int argc, char **argv, args &a)
       a.compile_scc = true;
       a.compile_scc_debug = true;
     }
-    else if (strcmp("--compile-lib", *argv) == 0)
-    {
-      argc--;
-      argv++;
-      a.compile_lib = true;
-    }
     else if (strcmp("--run-scc", *argv) == 0)
     {
       argc--;
@@ -114,35 +107,19 @@ int main(int argc, char **argv)
   if (a.files.size())
   {
     sccwriter *scw = NULL;
-    libwriter *lw = NULL;
     if (a.compile_scc)
     {
       scw = new sccwriter(a.compile_scc_debug ? opt_write_call_debug : 0);
     }
-    if (a.compile_lib)
-    {
-      lw = new libwriter;
-    }
     /* process the files named */
     for (const std::string& file : a.files)
     {
-      check_file(file.c_str(), a, scw, lw);
+      check_file(file.c_str(), a, scw);
     }
     if (scw)
     {
       scw->write_file();
       delete scw;
-    }
-    if (lw)
-    {
-#ifdef DEBUG_SYM_NAMES
-      lw->write_file();
-      delete lw;
-#else
-      std::cout << "ERROR libwriter: Must compile LFSC with DEBUG_SYM_NAMES "
-                   "flag (see Expr.h)"
-                << std::endl;
-#endif
     }
   }
   else
