@@ -554,6 +554,8 @@ Expr *check_code(Expr *_e)
 
       Expr *tp1 = check_code(e->kids[1]);
       Expr *tp2 = check_code(e->kids[2]);
+      tp1 = tp1->followDefs();
+      tp2 = tp2->followDefs();
       if (tp1 != tp2)
       {
         report_error(
@@ -623,9 +625,12 @@ Expr *check_code(Expr *_e)
         report_error(errstr);
       }
 
-      SymSExpr *tp1 = (SymSExpr *)check_code(e->kids[2]);
-      SymSExpr *tp2 = (SymSExpr *)check_code(e->kids[3]);
-      if (tp1->getclass() != SYMS_EXPR || tp1->val || tp1 != tp2)
+      Expr *tp1 = check_code(e->kids[2]);
+      Expr *tp2 = check_code(e->kids[3]);
+      tp1 = tp1->followDefs();
+      tp2 = tp2->followDefs();
+      if (tp1 != tp2)
+      {
         report_error(
             string("\"ifmarked\" used with expressions that do not ")
             + string("have equal simple datatypes\nfor their types.\n")
@@ -634,6 +639,7 @@ Expr *check_code(Expr *_e)
             + string("\n2. second expression: ") + e->kids[3]->toString()
             + string("\n3. first expression's type: ") + tp1->toString()
             + string("\n4. second expression's type: ") + tp2->toString());
+      }
       return tp1;
     }
     case COMPARE:
@@ -661,9 +667,12 @@ Expr *check_code(Expr *_e)
         report_error(errstr1);
       }
 
-      SymSExpr *tp2 = (SymSExpr *)check_code(e->kids[2]);
-      SymSExpr *tp3 = (SymSExpr *)check_code(e->kids[3]);
-      if (tp2->getclass() != SYMS_EXPR || tp2->val || tp2 != tp3)
+      Expr *tp2 = check_code(e->kids[2]);
+      Expr *tp3 = check_code(e->kids[3]);
+      tp2 = tp2->followDefs();
+      tp3 = tp3->followDefs();
+      if (tp2 != tp3)
+      {
         report_error(
             string("\"compare\" used with expressions that do not ")
             + string("have equal simple datatypes\nfor their types.\n")
@@ -671,6 +680,7 @@ Expr *check_code(Expr *_e)
             + string("\n2. second expression: ") + e->kids[3]->toString()
             + string("\n3. first expression's type: ") + tp2->toString()
             + string("\n4. second expression's type: ") + tp3->toString());
+      }
       return tp2;
     }
     case IFEQUAL:
@@ -689,16 +699,20 @@ Expr *check_code(Expr *_e)
             + tp1->toString());
       }
 
-      SymSExpr *tpc1 = (SymSExpr *)check_code(e->kids[2]);
-      SymSExpr *tpc2 = (SymSExpr *)check_code(e->kids[3]);
-      if (tpc1->getclass() != SYMS_EXPR || tpc1->val || tpc1 != tpc2)
+      Expr *tpc1 = check_code(e->kids[2]);
+      Expr *tpc2 = check_code(e->kids[3]);
+      tpc1 = tpc1->followDefs();
+      tpc2 = tpc2->followDefs();
+      if (tpc1 != tpc2)
+      {
         report_error(
             string("\"ifequal\" used with return expressions that do not ")
-            + string("have equal simple datatypes\nfor their types.\n")
+            + string("have equal datatypes\nfor their types.\n")
             + string("\n1. first expression: ") + e->kids[2]->toString()
             + string("\n2. second expression: ") + e->kids[3]->toString()
             + string("\n3. first expression's type: ") + tpc1->toString()
             + string("\n4. second expression's type: ") + tpc2->toString());
+      }
       return tpc1;
     }
     case MATCH:
