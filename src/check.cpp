@@ -426,12 +426,6 @@ start_check:
 
           // compute the type of the left hand side of the run statement
           Expr *progret = check_code(code);
-          if (progret==nullptr)
-          {
-            report_error(
-                std::string("Could not determine how to run code ")
-                + code->toString());
-          }
           /* determine expected type of the result term, and make sure
                   the code term is an allowed one. */
 
