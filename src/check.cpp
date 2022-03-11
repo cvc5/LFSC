@@ -6,7 +6,6 @@
 
 #include "code.h"
 #include "expr.h"
-#include "libwriter.h"
 #include "sccwriter.h"
 #include "trie.h"
 #ifndef _MSC_VER
@@ -189,7 +188,7 @@ start_check:
           DeclList decls = check_decl_list(create);
           Expr* ret_kind;
           Expr* ret = check(create, nullptr, &ret_kind);
-          for (const auto binding : decls.old_bindings)
+          for (const auto& binding : decls.old_bindings)
           {
             symbols->insert(get<0>(binding).c_str(),
                             {get<1>(binding), get<2>(binding)});
@@ -1084,7 +1083,7 @@ std::pair<Expr*, Expr*> build_macro(std::vector<std::pair<Expr*, Expr*>>&& args,
 
 int check_time;
 
-void check_file(const char *_filename, args a, sccwriter *scw, libwriter *lw)
+void check_file(const char* _filename, args a, sccwriter* scw)
 {
   std::ifstream fs;
   fs.open(_filename, std::fstream::in);
@@ -1094,7 +1093,7 @@ void check_file(const char *_filename, args a, sccwriter *scw, libwriter *lw)
     report_error(string("Could not open file \"") + _filename
                  + string("\" for reading.\n"));
   }
-  check_file(fs, filenameString, a, scw, lw);
+  check_file(fs, filenameString, a, scw);
   fs.close();
 }
 
@@ -1108,8 +1107,7 @@ void rebind_error(const std::string& id)
 void check_file(std::istream& in,
                 const std::string& _filename,
                 args a,
-                sccwriter* scw,
-                libwriter* lw)
+                sccwriter* scw)
 {
   // from code.h
   dbg_prog = a.show_runs;
@@ -1168,7 +1166,6 @@ void check_file(std::istream& in,
           SymSExpr* s = new SymSExpr(id);
           pair<Expr*, Expr*> prev =
               symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, t));
-          if (lw) lw->add_symbol(s, t);
           if (prev.first || prev.second)
           {
             rebind_error(id);
@@ -1184,7 +1181,7 @@ void check_file(std::istream& in,
           Expr* ret_kind;
           Expr* ret = check(true, nullptr, &ret_kind);
           // Restore bindings overwritten by decl list
-          for (const auto binding : decls.old_bindings)
+          for (const auto& binding : decls.old_bindings)
           {
             symbols->insert(get<0>(binding).c_str(),
                             {get<1>(binding), get<2>(binding)});
@@ -1195,7 +1192,6 @@ void check_file(std::istream& in,
           SymSExpr* s = new SymSExpr(id);
           pair<Expr*, Expr*> prev =
               symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, p.first));
-          if (lw) lw->add_symbol(s, p.first);
           if (prev.first || prev.second)
           {
             rebind_error(id);
@@ -1209,7 +1205,7 @@ void check_file(std::istream& in,
           string id(prefix_id());
           DeclList decls = check_decl_list(true);
           // Restore bindings overwritten by decl list
-          for (const auto binding : decls.old_bindings)
+          for (const auto& binding : decls.old_bindings)
           {
             symbols->insert(get<0>(binding).c_str(),
                             {get<1>(binding), get<2>(binding)});
@@ -1220,7 +1216,6 @@ void check_file(std::istream& in,
           SymSExpr* s = new SymSExpr(id);
           pair<Expr*, Expr*> prev =
               symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, p.first));
-          if (lw) lw->add_symbol(s, p.first);
           if (prev.first || prev.second)
           {
             rebind_error(id);
@@ -1238,7 +1233,7 @@ void check_file(std::istream& in,
           pair<Expr*, Expr*> macro =
               build_macro(move(decls.decls), ret, ret_ty);
           // Restore bindings overwritten by decl list
-          for (const auto binding : decls.old_bindings)
+          for (const auto& binding : decls.old_bindings)
           {
             symbols->insert(get<0>(binding).c_str(),
                             {get<1>(binding), get<2>(binding)});
@@ -1284,7 +1279,7 @@ void check_file(std::istream& in,
             Expr* ex_type = check(true, statType, nullptr);
             // consumes the `ex_type` reference
             (void)check(false, ex_type, nullptr);
-            for (const auto binding : decls.old_bindings)
+            for (const auto& binding : decls.old_bindings)
             {
               symbols->insert(get<0>(binding).c_str(),
                               {get<1>(binding), get<2>(binding)});

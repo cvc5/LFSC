@@ -13,9 +13,7 @@ void lfscc_check_file(const char* filename,
                       bool compile_scc_debug,
                       bool run_scc,
                       bool use_nested_app,
-                      bool compile_lib,
-                      sccwriter* scw,
-                      libwriter* lw)
+                      sccwriter* scw)
 {
   args a;
   a.show_runs = show_runs;
@@ -24,8 +22,7 @@ void lfscc_check_file(const char* filename,
   a.compile_scc_debug = compile_scc_debug;
   a.run_scc = run_scc;
   a.use_nested_app = use_nested_app;
-  a.compile_lib = compile_lib;
-  check_file(filename, a, scw, lw);
+  check_file(filename, a, scw);
 }
 
 void lfscc_check_file(std::istream& in,
@@ -35,9 +32,7 @@ void lfscc_check_file(std::istream& in,
                       bool compile_scc_debug,
                       bool run_scc,
                       bool use_nested_app,
-                      bool compile_lib,
-                      sccwriter* scw,
-                      libwriter* lw)
+                      sccwriter* scw)
 {
   args a;
   a.show_runs = show_runs;
@@ -46,9 +41,8 @@ void lfscc_check_file(std::istream& in,
   a.compile_scc_debug = compile_scc_debug;
   a.run_scc = run_scc;
   a.use_nested_app = use_nested_app;
-  a.compile_lib = compile_lib;
   std::string filename("<stream>");
-  check_file(in, filename, a, scw, lw);
+  check_file(in, filename, a, scw);
 }
 
 void lfscc_cleanup(void) { cleanup(); }
