@@ -266,15 +266,6 @@ Expr *read_code()
                 "Negative sign with expr that is not an numeric literal.");
           }
         }
-        case Token::Compare:
-        {
-          Expr* e1 = read_code();
-          Expr* e2 = read_code();
-          Expr* e3 = read_code();
-          Expr* e4 = read_code();
-          eat_token(Token::Close);
-          return new CExpr(COMPARE, e1, e2, e3, e4);
-        }
         case Token::Eof:
         {
           report_error("Unexpected end of file.");
@@ -642,47 +633,6 @@ Expr *check_code(Expr *_e)
       }
       return tp1;
     }
-    case COMPARE:
-    {
-      SymSExpr *tp0 = (SymSExpr *)check_code(e->kids[0]);
-      if (tp0->getclass() != SYMS_EXPR || tp0->val)
-      {
-        string errstr0 =
-            (string("\"compare\" is used with a first expression which ")
-             + string("cannot be a lambda-bound variable.\n")
-             + string("1. the expression :") + e->kids[0]->toString()
-             + string("\n2. its type: ") + tp0->toString());
-        report_error(errstr0);
-      }
-
-      SymSExpr *tp1 = (SymSExpr *)check_code(e->kids[1]);
-
-      if (tp1->getclass() != SYMS_EXPR || tp1->val)
-      {
-        string errstr1 =
-            (string("\"compare\" is used with a second expression which ")
-             + string("cannot be a lambda-bound variable.\n")
-             + string("1. the expression :") + e->kids[1]->toString()
-             + string("\n2. its type: ") + tp1->toString());
-        report_error(errstr1);
-      }
-
-      Expr *tp2 = check_code(e->kids[2]);
-      Expr *tp3 = check_code(e->kids[3]);
-      tp2 = tp2->followDefs();
-      tp3 = tp3->followDefs();
-      if (tp2 != tp3)
-      {
-        report_error(
-            string("\"compare\" used with expressions that do not ")
-            + string("have equal simple datatypes\nfor their types.\n")
-            + string("\n1. first expression: ") + e->kids[2]->toString()
-            + string("\n2. second expression: ") + e->kids[3]->toString()
-            + string("\n3. first expression's type: ") + tp2->toString()
-            + string("\n4. second expression's type: ") + tp3->toString());
-      }
-      return tp2;
-    }
     case IFEQUAL:
     {
       Expr *tp0 = check_code(e->kids[0]);
@@ -1019,35 +969,6 @@ start_run_code:
       }
       // else
       r1->dec();
-      _e = e->kids[3];
-      goto start_run_code;
-    }
-    case COMPARE:
-    {
-      Expr *r1 = run_code(e->kids[0]);
-      if (!r1) return NULL;
-      if (r1->getclass() != SYM_EXPR && r1->getclass() != SYMS_EXPR)
-      {
-        r1->dec();
-        return NULL;
-      }
-      Expr *r2 = run_code(e->kids[1]);
-      if (!r2) return NULL;
-      if (r2->getclass() != SYM_EXPR && r2->getclass() != SYMS_EXPR)
-      {
-        r2->dec();
-        return NULL;
-      }
-      if (r1 < r2)
-      {
-        r1->dec();
-        r2->dec();
-        _e = e->kids[2];
-        goto start_run_code;
-      }
-      // else
-      r1->dec();
-      r2->dec();
       _e = e->kids[3];
       goto start_run_code;
     }

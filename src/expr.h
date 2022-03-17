@@ -57,7 +57,6 @@ enum
   FAIL,
   MARKVAR,
   IFMARKED,
-  COMPARE,
   IFEQUAL
 };
 
