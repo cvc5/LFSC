@@ -894,12 +894,25 @@ start_run_code:
       {
         mpz_t r;
         mpz_init(r);
+        IntExpr * r1i = static_cast<IntExpr*>(r1);
+        IntExpr * r2i = static_cast<IntExpr*>(r2);
         if (e->getop() == ADD)
-          mpz_add(r, ((IntExpr *)r1)->n, ((IntExpr *)r2)->n);
+          mpz_add(r, r1i->n, r2i->n);
         else if (e->getop() == MUL)
-          mpz_mul(r, ((IntExpr *)r1)->n, ((IntExpr *)r2)->n);
+          mpz_mul(r, r1i->n, r2i->n);
         else if (e->getop() == DIV)
-          mpz_cdiv_q(r, ((IntExpr *)r1)->n, ((IntExpr *)r2)->n);
+        {
+          // if divisor is zero, it is an error
+          if (mpz_sgn(r2i->n) == 0)
+          {
+            std::cout << "mpz division by zero encountered" << std::endl;
+            r1->dec();
+            r2->dec();
+            return nullptr;
+          }
+          // use floor division
+          mpz_fdiv_q(r, r1i->n,r2i->n);
+        }
         r1->dec();
         r2->dec();
         return new IntExpr(r);
@@ -908,12 +921,24 @@ start_run_code:
       {
         mpq_t q;
         mpq_init(q);
+        RatExpr * r1r = static_cast<RatExpr*>(r1);
+        RatExpr * r2r = static_cast<RatExpr*>(r2);
         if (e->getop() == ADD)
-          mpq_add(q, ((RatExpr *)r1)->n, ((RatExpr *)r2)->n);
+          mpq_add(q, r1r->n, r2r->n);
         else if (e->getop() == MUL)
-          mpq_mul(q, ((RatExpr *)r1)->n, ((RatExpr *)r2)->n);
+          mpq_mul(q, r1r->n, r2r->n);
         else if (e->getop() == DIV)
-          mpq_div(q, ((RatExpr *)r1)->n, ((RatExpr *)r2)->n);
+        {
+          // if divisor is zero, it is an error
+          if (mpq_sgn(r2r->n) == 0)
+          {
+            std::cout << "mpq division by zero encountered" << std::endl;
+            r1->dec();
+            r2->dec();
+            return nullptr;
+          }
+          mpq_div(q, r1r->n, r2r->n);
+        }
         r1->dec();
         r2->dec();
         return new RatExpr(q);
