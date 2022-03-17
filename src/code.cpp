@@ -899,7 +899,10 @@ start_run_code:
         else if (e->getop() == MUL)
           mpz_mul(r, ((IntExpr *)r1)->n, ((IntExpr *)r2)->n);
         else if (e->getop() == DIV)
-          mpz_cdiv_q(r, ((IntExpr *)r1)->n, ((IntExpr *)r2)->n);
+        {
+          // use floor division
+          mpz_fdiv_q(r, ((IntExpr *)r1)->n, ((IntExpr *)r2)->n);
+        }
         r1->dec();
         r2->dec();
         return new IntExpr(r);
