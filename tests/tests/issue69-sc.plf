@@ -1,0 +1,2 @@
+(declare check_mpz_div2_zero (! x mpz (! sc (^ (mp_div x 2) 0) type)))
+(check (check_mpz_div2_zero 1))
