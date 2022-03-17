@@ -6,6 +6,7 @@ set(lfsc_test_file_list
   issue20.plf
   issue59.plf
   issue60.plf
+  issue69-sc.plf
   issue8-mpexp.plf
   formal_type_args.plf
   mp_prefix.plf
