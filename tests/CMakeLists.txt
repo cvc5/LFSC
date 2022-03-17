@@ -43,6 +43,11 @@ set(lfsc_test_file_list
   sugar_define_const.plf
   sugar_provided.plf
   sugar_skolem.plf
+  unbind_ord_dec_type.plf
+  unbind_ord_arrow.plf
+  unbind_ord_chk_assuming.plf
+  unbind_ord_def_const.plf
+  unbind_ord_dec_rule.plf
   code_macro_app.plf
   macro_in_let_in_sc.plf
   sc_call_in_macro_in_sc.plf

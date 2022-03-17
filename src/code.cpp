@@ -91,7 +91,7 @@ Expr *read_case()
   Expr *ret = read_code();
   if (pat) ret = new CExpr(CASE, pat, ret);
 
-  for (int i = 0, iend = prevs.size(); i < iend; i++)
+  for (size_t i = prevs.size() - 1; i < prevs.size(); --i)
   {
     string &s = vars[i]->s;
     symbols->insert(s.c_str(), prevs[i]);
@@ -780,7 +780,7 @@ Expr *check_code(Expr *_e)
 
             tp = check_code(c->kids[1]);
 
-            for (int i = 0, iend = prevs.size(); i < iend; i++)
+            for (size_t i = prevs.size() - 1; i < prevs.size(); --i)
             {
               symbols->insert(((SymSExpr *)vars[i])->s.c_str(), prevs[i]);
             }

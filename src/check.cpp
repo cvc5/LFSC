@@ -188,8 +188,11 @@ start_check:
           DeclList decls = check_decl_list(create);
           Expr* ret_kind;
           Expr* ret = check(create, nullptr, &ret_kind);
-          for (const auto& binding : decls.old_bindings)
+          for (auto binding_it = decls.old_bindings.rbegin();
+               binding_it != decls.old_bindings.rend();
+               ++binding_it)
           {
+            const auto& binding = *binding_it;
             symbols->insert(get<0>(binding).c_str(),
                             {get<1>(binding), get<2>(binding)});
           }
@@ -1181,8 +1184,11 @@ void check_file(std::istream& in,
           Expr* ret_kind;
           Expr* ret = check(true, nullptr, &ret_kind);
           // Restore bindings overwritten by decl list
-          for (const auto& binding : decls.old_bindings)
+          for (auto binding_it = decls.old_bindings.rbegin();
+               binding_it != decls.old_bindings.rend();
+               ++binding_it)
           {
+            const auto& binding = *binding_it;
             symbols->insert(get<0>(binding).c_str(),
                             {get<1>(binding), get<2>(binding)});
           }
@@ -1205,8 +1211,11 @@ void check_file(std::istream& in,
           string id(prefix_id());
           DeclList decls = check_decl_list(true);
           // Restore bindings overwritten by decl list
-          for (const auto& binding : decls.old_bindings)
+          for (auto binding_it = decls.old_bindings.rbegin();
+               binding_it != decls.old_bindings.rend();
+               ++binding_it)
           {
+            const auto& binding = *binding_it;
             symbols->insert(get<0>(binding).c_str(),
                             {get<1>(binding), get<2>(binding)});
           }
@@ -1233,8 +1242,11 @@ void check_file(std::istream& in,
           pair<Expr*, Expr*> macro =
               build_macro(move(decls.decls), ret, ret_ty);
           // Restore bindings overwritten by decl list
-          for (const auto& binding : decls.old_bindings)
+          for (auto binding_it = decls.old_bindings.rbegin();
+               binding_it != decls.old_bindings.rend();
+               ++binding_it)
           {
+            const auto& binding = *binding_it;
             symbols->insert(get<0>(binding).c_str(),
                             {get<1>(binding), get<2>(binding)});
           }
@@ -1279,15 +1291,18 @@ void check_file(std::istream& in,
             Expr* ex_type = check(true, statType, nullptr);
             // consumes the `ex_type` reference
             (void)check(false, ex_type, nullptr);
-            for (const auto& binding : decls.old_bindings)
+            for (auto binding_it = decls.old_bindings.rbegin();
+                 binding_it != decls.old_bindings.rend();
+                 ++binding_it)
             {
+              const auto& binding = *binding_it;
               symbols->insert(get<0>(binding).c_str(),
                               {get<1>(binding), get<2>(binding)});
             }
           }
 
           // clean up local symbols
-          for (int a = 0; a < (int)local_sym_names.size(); a++)
+          for (int a = local_sym_names.size()-1; a >= 0; --a)
           {
             symbols->insert(local_sym_names[a].first.c_str(),
                             local_sym_names[a].second);
@@ -1582,8 +1597,11 @@ Expr* compute_kind(Expr* e)
                          + string(" applied to some arguments, but that "
                                   "expression is not a function"));
           }
-          for (const auto& p : prev_pi_vars_and_values)
+          for (auto p_it = prev_pi_vars_and_values.rbegin();
+               p_it != prev_pi_vars_and_values.rend();
+               ++p_it)
           {
+            const auto& p = *p_it;
             p.first->val = p.second;
           }
           return head;
