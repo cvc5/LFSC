@@ -49,6 +49,10 @@ Expr *read_case()
       // parse application
       SymSExpr *s = read_ctor();
       pat = s;
+      if (pat == nullptr)
+      {
+        report_error("Could not read constructor in a match case.");
+      }
       Token::Token c;
       while ((c = next_token()) != Token::Close)
       {
