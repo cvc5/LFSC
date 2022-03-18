@@ -617,7 +617,7 @@ Expr *check_code(Expr *_e)
 
       if (tptp==nullptr || !tptp->isType(statType))
       {
-        string errstr =
+        std::string errstr =
             (string("\"ifmarked\" is used with an expression which ")
              + string("cannot be a non-variable or a lambda-bound variable.\n")
              + string("1. the expression :") + e->kids[1]->toString()
