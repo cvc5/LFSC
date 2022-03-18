@@ -595,7 +595,7 @@ Expr *check_code(Expr *_e)
       {
         std::string errstr =
             (string("\"markvar\" is used with an expression which ")
-             + string("cannot be a (non-lambda-bound) variable.\n")
+             + string("cannot be a non-variable or a lambda-bound variable.\n")
              + string("1. the expression :") + e->kids[1]->toString()
              + string("\n2. its type: ") + tp->toString());
         report_error(errstr);
@@ -608,18 +608,18 @@ Expr *check_code(Expr *_e)
     {
       SymSExpr *tp = (SymSExpr *)check_code(e->kids[1]);
 
-      Expr *tptp = NULL;
+      Expr *tptp = nullptr;
 
       if (tp->getclass() == SYMS_EXPR && !tp->val)
       {
         tptp = symbols->get(tp->s.c_str()).second;
       }
 
-      if (!tptp->isType(statType))
+      if (tptp==nullptr || !tptp->isType(statType))
       {
         string errstr =
             (string("\"ifmarked\" is used with an expression which ")
-             + string("cannot be a lambda-bound variable.\n")
+             + string("cannot be a non-variable or a lambda-bound variable.\n")
              + string("1. the expression :") + e->kids[1]->toString()
              + string("\n2. its type: ") + tp->toString());
         report_error(errstr);
