@@ -3,6 +3,7 @@ set(lfsc_test_file_list
   bad-char.plf
   bool.plf
   eq_mpz.plf
+  error-pr15.plf
   issue20.plf
   issue59.plf
   issue60.plf
