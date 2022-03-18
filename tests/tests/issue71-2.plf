@@ -1,4 +1,4 @@
 ; errorline: 4
 
 (declare x type)
-(run (markvar x))
+(run (ifmarked x x x))
