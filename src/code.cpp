@@ -49,6 +49,10 @@ Expr *read_case()
       // parse application
       SymSExpr *s = read_ctor();
       pat = s;
+      if (pat == nullptr)
+      {
+        report_error("Could not read constructor in a match case.");
+      }
       Token::Token c;
       while ((c = next_token()) != Token::Close)
       {
@@ -91,7 +95,7 @@ Expr *read_case()
   Expr *ret = read_code();
   if (pat) ret = new CExpr(CASE, pat, ret);
 
-  for (int i = 0, iend = prevs.size(); i < iend; i++)
+  for (size_t i = prevs.size() - 1; i < prevs.size(); --i)
   {
     string &s = vars[i]->s;
     symbols->insert(s.c_str(), prevs[i]);
@@ -584,18 +588,18 @@ Expr *check_code(Expr *_e)
     {
       SymSExpr *tp = (SymSExpr *)check_code(e->kids[1]);
 
-      Expr *tptp = NULL;
+      Expr *tptp = nullptr;
 
       if (tp->getclass() == SYMS_EXPR && !tp->val)
       {
         tptp = symbols->get(tp->s.c_str()).second;
       }
 
-      if (!tptp->isType(statType))
+      if (tptp==nullptr || !tptp->isType(statType))
       {
-        string errstr =
+        std::string errstr =
             (string("\"markvar\" is used with an expression which ")
-             + string("cannot be a lambda-bound variable.\n")
+             + string("cannot be a non-variable or a lambda-bound variable.\n")
              + string("1. the expression :") + e->kids[1]->toString()
              + string("\n2. its type: ") + tp->toString());
         report_error(errstr);
@@ -608,18 +612,18 @@ Expr *check_code(Expr *_e)
     {
       SymSExpr *tp = (SymSExpr *)check_code(e->kids[1]);
 
-      Expr *tptp = NULL;
+      Expr *tptp = nullptr;
 
       if (tp->getclass() == SYMS_EXPR && !tp->val)
       {
         tptp = symbols->get(tp->s.c_str()).second;
       }
 
-      if (!tptp->isType(statType))
+      if (tptp==nullptr || !tptp->isType(statType))
       {
-        string errstr =
+        std::string errstr =
             (string("\"ifmarked\" is used with an expression which ")
-             + string("cannot be a lambda-bound variable.\n")
+             + string("cannot be a non-variable or a lambda-bound variable.\n")
              + string("1. the expression :") + e->kids[1]->toString()
              + string("\n2. its type: ") + tp->toString());
         report_error(errstr);
@@ -780,7 +784,7 @@ Expr *check_code(Expr *_e)
 
             tp = check_code(c->kids[1]);
 
-            for (int i = 0, iend = prevs.size(); i < iend; i++)
+            for (size_t i = prevs.size() - 1; i < prevs.size(); --i)
             {
               symbols->insert(((SymSExpr *)vars[i])->s.c_str(), prevs[i]);
             }
@@ -894,12 +898,25 @@ start_run_code:
       {
         mpz_t r;
         mpz_init(r);
+        IntExpr * r1i = static_cast<IntExpr*>(r1);
+        IntExpr * r2i = static_cast<IntExpr*>(r2);
         if (e->getop() == ADD)
-          mpz_add(r, ((IntExpr *)r1)->n, ((IntExpr *)r2)->n);
+          mpz_add(r, r1i->n, r2i->n);
         else if (e->getop() == MUL)
-          mpz_mul(r, ((IntExpr *)r1)->n, ((IntExpr *)r2)->n);
+          mpz_mul(r, r1i->n, r2i->n);
         else if (e->getop() == DIV)
-          mpz_cdiv_q(r, ((IntExpr *)r1)->n, ((IntExpr *)r2)->n);
+        {
+          // if divisor is zero, it is an error
+          if (mpz_sgn(r2i->n) == 0)
+          {
+            std::cout << "mpz division by zero encountered" << std::endl;
+            r1->dec();
+            r2->dec();
+            return nullptr;
+          }
+          // use floor division
+          mpz_fdiv_q(r, r1i->n,r2i->n);
+        }
         r1->dec();
         r2->dec();
         return new IntExpr(r);
@@ -908,12 +925,24 @@ start_run_code:
       {
         mpq_t q;
         mpq_init(q);
+        RatExpr * r1r = static_cast<RatExpr*>(r1);
+        RatExpr * r2r = static_cast<RatExpr*>(r2);
         if (e->getop() == ADD)
-          mpq_add(q, ((RatExpr *)r1)->n, ((RatExpr *)r2)->n);
+          mpq_add(q, r1r->n, r2r->n);
         else if (e->getop() == MUL)
-          mpq_mul(q, ((RatExpr *)r1)->n, ((RatExpr *)r2)->n);
+          mpq_mul(q, r1r->n, r2r->n);
         else if (e->getop() == DIV)
-          mpq_div(q, ((RatExpr *)r1)->n, ((RatExpr *)r2)->n);
+        {
+          // if divisor is zero, it is an error
+          if (mpq_sgn(r2r->n) == 0)
+          {
+            std::cout << "mpq division by zero encountered" << std::endl;
+            r1->dec();
+            r2->dec();
+            return nullptr;
+          }
+          mpq_div(q, r1r->n, r2r->n);
+        }
         r1->dec();
         r2->dec();
         return new RatExpr(q);

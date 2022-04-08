@@ -1,0 +1,7 @@
+; Credit: Bruno Dutertre (https://github.com/cvc5/LFSC/issues/67)
+; errorline: 7
+
+(declare x type)
+(declare sort type)
+(check-assuming ((: x sort) (: x sort)) sort x)
+(check (: sort x)) ; error: x should be a type!

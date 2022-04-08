@@ -7,6 +7,10 @@ set(lfsc_test_file_list
   issue35.plf
   issue59.plf
   issue60.plf
+  issue66.plf
+  issue69-sc.plf
+  issue71.plf
+  issue71-2.plf
   issue8-mpexp.plf
   formal_type_args.plf
   mp_prefix.plf
@@ -43,6 +47,11 @@ set(lfsc_test_file_list
   sugar_define_const.plf
   sugar_provided.plf
   sugar_skolem.plf
+  unbind_ord_dec_type.plf
+  unbind_ord_arrow.plf
+  unbind_ord_chk_assuming.plf
+  unbind_ord_def_const.plf
+  unbind_ord_dec_rule.plf
   code_macro_app.plf
   macro_in_let_in_sc.plf
   sc_call_in_macro_in_sc.plf
