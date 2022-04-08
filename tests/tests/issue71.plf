@@ -1,0 +1,4 @@
+; errorline: 4
+
+(declare x type)
+(run (markvar x))
