@@ -1,0 +1,9 @@
+; errorline: 8
+
+(declare bool type)
+(declare tt bool)
+(declare ff bool)
+
+(program f1 ((n mpz)) mpz
+  (mp_ifneg n tt ff)
+)  
