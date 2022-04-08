@@ -5,9 +5,13 @@ set(lfsc_test_file_list
   eq_mpz.plf
   error-pr15.plf
   issue20.plf
+  issue35.plf
   issue59.plf
   issue60.plf
+  issue66.plf
   issue69-sc.plf
+  issue71.plf
+  issue71-2.plf
   issue8-mpexp.plf
   formal_type_args.plf
   mp_prefix.plf

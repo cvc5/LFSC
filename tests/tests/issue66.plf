@@ -1,0 +1,6 @@
+; errorline: 6
+
+(declare sort type)
+(declare term type)
+(declare Bool sort)
+(program bad ((t term)) sort (match t ((default x) Bool)))
