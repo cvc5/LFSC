@@ -4,6 +4,7 @@ set(lfsc_test_file_list
   bool.plf
   eq_mpz.plf
   issue20.plf
+  issue35.plf
   issue59.plf
   issue60.plf
   issue66.plf
