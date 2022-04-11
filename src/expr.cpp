@@ -10,7 +10,6 @@
 using namespace std;
 
 int HoleExpr::next_id = 0;
-int Expr::markedCount = 0;
 // Maximum reference count, 2^22-1
 int Expr::d_maxRefCount = 4194303;
 
@@ -1046,12 +1045,10 @@ bool Expr::isType(Expr *statType)
   return true;
 }
 
-int SymExpr::symmCount = 0;
 int SymExpr::mark()
 {
   if (mark_map.find(this) == mark_map.end())
   {
-    symmCount++;
     mark_map[this] = 0;
   }
   return mark_map[this];

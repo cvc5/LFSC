@@ -31,8 +31,6 @@ typedef struct args
   bool use_nested_app;
 } args;
 
-extern int check_time;
-
 class sccwriter;
 class libwriter;
 

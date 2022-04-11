@@ -119,7 +119,6 @@ class Expr
  public:
   virtual ~Expr() {}
 
-  static int markedCount;
   inline Expr *followDefs();
   inline int getclass() const { return data & 7; }
   int getexmark() const { return data & 256; }
@@ -342,7 +341,6 @@ class SymExpr : public Expr
 {
  public:
   Expr *val;  // may be set by beta-reduction and clone().
-  static int symmCount;
 
   SymExpr(std::string _s, int theclass = SYM_EXPR) : Expr(theclass, 0), val(0)
   {
