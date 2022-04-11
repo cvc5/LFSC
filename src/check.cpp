@@ -1312,6 +1312,7 @@ void check_file(std::istream& in,
 
           eat_excess(prev);
 
+          std::cout << "success" << std::endl;
           // cleanup();
           // exit(0);
           break;
