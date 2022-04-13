@@ -1084,8 +1084,6 @@ std::pair<Expr*, Expr*> build_macro(std::vector<std::pair<Expr*, Expr*>>&& args,
   return {ret, ret_ty};
 }
 
-int check_time;
-
 void check_file(const char* _filename, args a, sccwriter* scw)
 {
   std::ifstream fs;
@@ -1312,6 +1310,7 @@ void check_file(std::istream& in,
 
           eat_excess(prev);
 
+          std::cout << "success" << std::endl;
           // cleanup();
           // exit(0);
           break;

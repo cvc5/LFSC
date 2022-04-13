@@ -102,8 +102,6 @@ int main(int argc, char **argv)
 
   init();
 
-  check_time = (int)clock();
-
   if (a.files.size())
   {
     sccwriter *scw = NULL;
@@ -135,9 +133,6 @@ int main(int argc, char **argv)
   cleanup();
   a.files.clear();
 #endif
-
-  std::cout << "Proof checked successfully!" << std::endl << std::endl;
-  std::cout << "time = " << (int)clock() - check_time << std::endl;
-  std::cout << "sym count = " << SymExpr::symmCount << std::endl;
-  std::cout << "marked count = " << Expr::markedCount << std::endl;
+  
+  // older versions printed "Proof checked successfully!" here
 }

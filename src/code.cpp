@@ -172,7 +172,6 @@ Expr *read_code()
             std::cout << "Can't make IFMARKED with index = " << index
                       << std::endl;
           }
-          Expr::markedCount++;
           eat_token(Token::Close);
           return ret;
         }
@@ -213,7 +212,6 @@ Expr *read_code()
             std::cout << "Can't make MARKVAR with index = " << index
                       << std::endl;
           }
-          Expr::markedCount++;
           eat_token(Token::Close);
           return ret;
         }
