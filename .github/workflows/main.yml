@@ -16,7 +16,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, ubuntu-18.04]
         name: [ production ]
 
     name: ${{ matrix.os }}:${{ matrix.name }}
