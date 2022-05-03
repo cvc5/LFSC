@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.9)
+cmake_minimum_required (VERSION 3.9)
 
 macro(add_cxx_flag flag)
   message(STATUS "Configure with flag '${flag}'")
@@ -32,7 +32,7 @@ else()
 endif()
 
 # For macOS, homebrew
-list(PREPEND CMAKE_PREFIX_PATH "/usr/local/opt/flex")
+list(APPEND CMAKE_PREFIX_PATH "/usr/local/opt/flex")
 find_package(FLEX REQUIRED)
 if (FLEX_FOUND AND NOT ${FLEX_INCLUDE_DIRS} STREQUAL "FLEX_INCLUDE_DIR-NOTFOUND")
     message(STATUS "Flex include directories: ${FLEX_INCLUDE_DIRS}")
