@@ -352,19 +352,23 @@ Expr *CExpr::whr()
     if (cloned_head) cloned_head->dec();
     if (i>=(int)args.size())
     {
-      return head;
+      if (head->getop()!=APP)
+      {
+        return head;
+      }
+      else
+      {
+        head = (CExpr *)head->collect_args(args, true);
+      }
     }
-    else
-    {
-      // destructive update
-      kids = new Expr *[args.size() - i + 2];
-      kids[0] = head;
-      for (int j = i, iend = args.size(); j < iend; j++)
-        kids[j - i + 1] = args[i];
-      kids[args.size() - i + 1] = NULL;
-      int refcount = getrefcnt();
-      data = (refcount << 9 | (APP << 3) | CEXPR);
-    }
+    // destructive update
+    kids = new Expr *[args.size() - i + 2];
+    kids[0] = head;
+    for (int j = i, iend = args.size(); j < iend; j++)
+      kids[j - i + 1] = args[i];
+    kids[args.size() - i + 1] = NULL;
+    int refcount = getrefcnt();
+    data = (refcount << 9 | (APP << 3) | CEXPR);
   }
   return this;
 }
