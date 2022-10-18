@@ -350,10 +350,16 @@ Expr *CExpr::whr()
     for (; i < iend; i++) args[i]->inc();
     head->inc();
     if (cloned_head) cloned_head->dec();
-    return build_app(head, args, i);
+    // destructive update
+    kids = new Expr *[args.size() - i + 2];
+    kids[0] = head;
+    for (int j = i, iend = args.size(); i < iend; i++)
+      kids[j - i + 1] = args[i];
+    kids[args.size() - i + 1] = NULL;
+    int refcount = getrefcnt();
+    data = (refcount << 9 | (APP << 3) | CEXPR);
   }
-  else
-    return this;
+  return this;
 }
 
 Expr *CExpr::convert_to_tree_app(Expr *e)
