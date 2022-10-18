@@ -350,14 +350,21 @@ Expr *CExpr::whr()
     for (; i < iend; i++) args[i]->inc();
     head->inc();
     if (cloned_head) cloned_head->dec();
-    // destructive update
-    kids = new Expr *[args.size() - i + 2];
-    kids[0] = head;
-    for (int j = i, iend = args.size(); i < iend; i++)
-      kids[j - i + 1] = args[i];
-    kids[args.size() - i + 1] = NULL;
-    int refcount = getrefcnt();
-    data = (refcount << 9 | (APP << 3) | CEXPR);
+    if (i>=(int)args.size())
+    {
+      return head;
+    }
+    else
+    {
+      // destructive update
+      kids = new Expr *[args.size() - i + 2];
+      kids[0] = head;
+      for (int j = i, iend = args.size(); j < iend; j++)
+        kids[j - i + 1] = args[i];
+      kids[args.size() - i + 1] = NULL;
+      int refcount = getrefcnt();
+      data = (refcount << 9 | (APP << 3) | CEXPR);
+    }
   }
   return this;
 }
