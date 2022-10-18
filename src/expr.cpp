@@ -350,6 +350,7 @@ Expr *CExpr::whr()
     for (; i < iend; i++) args[i]->inc();
     head->inc();
     if (cloned_head) cloned_head->dec();
+    return build_app(head, args, i);
     if (i>=(int)args.size())
     {
       if (head->getop()!=APP)
@@ -422,6 +423,7 @@ bool Expr::defeq(Expr *e)
   /* we handle a few special cases up front, where this Expr might
      equal e, even though they have different opclass (i.e., different
      structure). */
+  std::cout << "Compare " << this << " " << toString() << " " << e << " " << e->toString() << std::endl;
 
   if (this == e) return true;
   int op1 = getop();
@@ -430,7 +432,7 @@ bool Expr::defeq(Expr *e)
   {
     case ASCRIBE: return ((CExpr *)this)->kids[0]->defeq(e);
     case APP:
-    {
+    {    
       Expr *tmp = ((CExpr *)this)->whr();
       if (tmp != this)
       {
@@ -556,100 +558,133 @@ bool Expr::defeq(Expr *e)
 
   /* at this point, e1 and e2 must have the same opclass if they are
      to be equal. */
+  
 
-  if (op1 != op2) return false;
-
-  if (op1 == NOT_CEXPR)
+  if (op1 == op2)
   {
-    switch (getclass())
+    if (op1 == NOT_CEXPR)
     {
-      case INT_EXPR:
+      switch (getclass())
       {
-        IntExpr *i1 = (IntExpr *)this;
-        IntExpr *i2 = (IntExpr *)e;
-        return (mpz_cmp(i1->n, i2->n) == 0);
+        case INT_EXPR:
+        {
+          IntExpr *i1 = (IntExpr *)this;
+          IntExpr *i2 = (IntExpr *)e;
+          return (mpz_cmp(i1->n, i2->n) == 0);
+        }
+        case RAT_EXPR:
+        {
+          RatExpr *r1 = (RatExpr *)this;
+          RatExpr *r2 = (RatExpr *)e;
+          return (mpq_cmp(r1->n, r2->n) == 0);
+        }
+        case SYMS_EXPR:
+        case SYM_EXPR: return (this == e);
       }
-      case RAT_EXPR:
+    }
+
+    /* Now op1 and op2 must both be CExprs, and must have the same op to be
+      equal. */
+
+    CExpr *e1 = (CExpr *)this;
+    CExpr *e2 = (CExpr *)e;
+
+    int last = 1;
+    switch (op1)
+    {
+      case PI:
+        if (!e1->kids[1]->defeq(e2->kids[1])) return false;
+        last++;
+        // fall through to LAM case
+      case LAM:
       {
-        RatExpr *r1 = (RatExpr *)this;
-        RatExpr *r2 = (RatExpr *)e;
-        return (mpq_cmp(r1->n, r2->n) == 0);
+        /* It is critical that we point e1's var. (v1) back to e2's (call
+          it v2).  The reason this is critical is that we assume any
+          holes are in e1.  So we could end up with (_ v1) = t. We wish
+          to fill _ in this case with (\ v2 t).  If v2 pointed to v1, we
+          could not return (\ v1 t), because the fact that v2 points to
+          v1 would then be lost.
+        */
+        SymExpr *v1 = (SymExpr *)e1->kids[0];
+        Expr *prev_v1_val = v1->val;
+        v1->val = e2->kids[0]->followDefs();
+        bool bodies_equal = e1->kids[last]->defeq(e2->kids[last]);
+        v1->val = prev_v1_val;
+        return bodies_equal;
       }
-      case SYMS_EXPR:
-      case SYM_EXPR: return (this == e);
+      case APP:
+      {
+        int counter = 0;
+        bool success = true;
+        while (e1->kids[counter])
+        {
+          if (e1->kids[counter] != e2->kids[counter])
+          {
+            if (!e2->kids[counter]
+                || !e1->kids[counter]->defeq(e2->kids[counter]))
+            {
+              success = false;
+              break;
+            }
+            //--- optimization : replace child with equivalent pointer if was
+            //defeq
+            // Heuristic: prefer symbolic kids because they may be cheaper to
+            // deal with (e.g. in free_in()).
+            if (e2->kids[counter]->isSymbolic()
+                || (!e1->kids[counter]->isSymbolic()
+                    && e1->kids[counter]->getrefcnt()
+                          < e2->kids[counter]->getrefcnt()))
+            {
+              e1->kids[counter]->dec();
+              e2->kids[counter]->inc();
+              e1->kids[counter] = e2->kids[counter];
+            }
+            else
+            {
+              e2->kids[counter]->dec();
+              e1->kids[counter]->inc();
+              e2->kids[counter] = e1->kids[counter];
+            }
+          }
+          //---
+          counter++;
+        }
+        if (success && e2->kids[counter] == NULL)
+        {
+          return true;
+        }
+      }
+      case TYPE:
+      case KIND:
+      case MPZ:
+        // already checked that both exprs have the same opclass.
+        return true;
+    }  // switch(op1)
+  }
+  if (op1==APP)
+  {
+    // maybe weak head reduction?
+    Expr *tmp = ((CExpr *)this)->whr();
+    if (tmp != this)
+    {
+      bool b = tmp->defeq(e);
+      tmp->dec();
+      return b;
     }
   }
-
-  /* Now op1 and op2 must both be CExprs, and must have the same op to be
-     equal. */
-
-  CExpr *e1 = (CExpr *)this;
-  CExpr *e2 = (CExpr *)e;
-
-  int last = 1;
-  switch (op1)
+  if (op2==APP)
   {
-    case PI:
-      if (!e1->kids[1]->defeq(e2->kids[1])) return false;
-      last++;
-      // fall through to LAM case
-    case LAM:
+    // maybe weak head reduction?
+    Expr *tmp = ((CExpr *)e)->whr();
+    if (tmp != e)
     {
-      /* It is critical that we point e1's var. (v1) back to e2's (call
-         it v2).  The reason this is critical is that we assume any
-         holes are in e1.  So we could end up with (_ v1) = t. We wish
-         to fill _ in this case with (\ v2 t).  If v2 pointed to v1, we
-         could not return (\ v1 t), because the fact that v2 points to
-         v1 would then be lost.
-      */
-      SymExpr *v1 = (SymExpr *)e1->kids[0];
-      Expr *prev_v1_val = v1->val;
-      v1->val = e2->kids[0]->followDefs();
-      bool bodies_equal = e1->kids[last]->defeq(e2->kids[last]);
-      v1->val = prev_v1_val;
-      return bodies_equal;
+      bool b = defeq(tmp);
+      tmp->dec();
+      return b;
     }
-    case APP:
-    {
-      int counter = 0;
-      while (e1->kids[counter])
-      {
-        if (e1->kids[counter] != e2->kids[counter])
-        {
-          if (!e2->kids[counter]
-              || !e1->kids[counter]->defeq(e2->kids[counter]))
-            return false;
-          //--- optimization : replace child with equivalent pointer if was
-          //defeq
-          // Heuristic: prefer symbolic kids because they may be cheaper to
-          // deal with (e.g. in free_in()).
-          if (e2->kids[counter]->isSymbolic()
-              || (!e1->kids[counter]->isSymbolic()
-                  && e1->kids[counter]->getrefcnt()
-                         < e2->kids[counter]->getrefcnt()))
-          {
-            e1->kids[counter]->dec();
-            e2->kids[counter]->inc();
-            e1->kids[counter] = e2->kids[counter];
-          }
-          else
-          {
-            e2->kids[counter]->dec();
-            e1->kids[counter]->inc();
-            e2->kids[counter] = e1->kids[counter];
-          }
-        }
-        //---
-        counter++;
-      }
-      return e2->kids[counter] == NULL;
-    }
-    case TYPE:
-    case KIND:
-    case MPZ:
-      // already checked that both exprs have the same opclass.
-      return true;
-  }  // switch(op1)
+  }
+  return false;
+  
 
   std::abort();  // never reached.
 }

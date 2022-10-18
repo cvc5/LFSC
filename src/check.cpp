@@ -16,6 +16,7 @@
 #include <stack>
 #include <utility>
 #include "scccode.h"
+#include <sstream>
 
 using namespace std;
 #ifndef _MSC_VER
@@ -672,12 +673,17 @@ start_check:
                 for (int i = 0, iend = holes.size(); i < iend; i++)
                 {
                   if (!holes[i]->val)
+                  {
                     /* if the hole is free in the domain, we will be filling
                        it in when we make our tail call, since the domain
                        is the expected type for the argument */
                     if (!headtp_domain->free_in(holes[i]))
-                      report_error(string("A hole was left unfilled after ")
-                                   + string("checking an application.\n"));
+                    {
+                      std::stringstream ss;
+                      ss << holes[i]->toString() << " was not filled";
+                      report_error(ss.str());
+                    }
+                  }
                   holes[i]->dec();
                 }
 

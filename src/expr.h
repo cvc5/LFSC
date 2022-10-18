@@ -14,6 +14,8 @@
 #define DEBUG_SYM_NAMES
 // Uncomment for verbose printing of symbols
 //#define DEBUG_SYMS
+#define DEBUG_HOLES
+//#define DEBUG_HOLE_NAMES
 
 // Expr class
 enum
