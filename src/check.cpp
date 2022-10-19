@@ -1649,6 +1649,21 @@ Expr* compute_kind(Expr* e)
   }
 }
 
+void assert_all_vars_bound(Expr* e)
+{
+  Expr* unbound = e->find_unbound_vars(symbols);
+  if (unbound)
+  {
+    std::ostringstream o;
+    o << "In the expression:\n\t";
+    e->print(o);
+    o << "\nthe symbol\n\t";
+    unbound->print(o);
+    o << "\nis unbound\n";
+    report_error(o.str());
+  }
+}
+
 void init()
 {
   symbols->insert("type", pair<Expr*, Expr*>(statType, statKind));

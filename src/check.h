@@ -187,4 +187,6 @@ extern Expr *statType;
  */
 Expr* compute_kind(Expr* e);
 
+void assert_all_vars_bound(Expr* e);
+
 #endif
