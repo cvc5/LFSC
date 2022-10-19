@@ -423,7 +423,7 @@ bool Expr::defeq(Expr *e)
   /* we handle a few special cases up front, where this Expr might
      equal e, even though they have different opclass (i.e., different
      structure). */
-  std::cout << "Compare " << this << " " << toString() << " " << e << " " << e->toString() << std::endl;
+  //std::cout << "Compare " << this << " " << toString() << " " << e << " " << e->toString() << std::endl;
 
   if (this == e) return true;
   int op1 = getop();
@@ -433,6 +433,7 @@ bool Expr::defeq(Expr *e)
     case ASCRIBE: return ((CExpr *)this)->kids[0]->defeq(e);
     case APP:
     {    
+      /*
       Expr *tmp = ((CExpr *)this)->whr();
       if (tmp != this)
       {
@@ -440,6 +441,7 @@ bool Expr::defeq(Expr *e)
         tmp->dec();
         return b;
       }
+      */
       if (get_head()->getclass() == HOLE_EXPR)
       {
         vector<Expr *> args;
@@ -465,7 +467,7 @@ bool Expr::defeq(Expr *e)
         for (int i = 0, iend = args.size(); i < iend; i++)
           args[i]->clearexmark();
 #ifdef DEBUG_HOLES
-        cout << "Filling hole ";
+        cout << "[1] Filling hole ";
         head->debug();
         cout << "with ";
         t->debug();
@@ -483,7 +485,7 @@ bool Expr::defeq(Expr *e)
           HoleExpr *h = (HoleExpr *)this;
           if (h->val) return h->val->defeq(e);
 #ifdef DEBUG_HOLES
-          cout << "Filling hole ";
+          cout << "[2] Filling hole ";
           h->debug();
           cout << "with ";
           e->debug();
@@ -513,6 +515,7 @@ bool Expr::defeq(Expr *e)
     case ASCRIBE: return defeq(((CExpr *)e)->kids[0]);
     case APP:
     {
+      /*
       Expr *tmp = ((CExpr *)e)->whr();
       if (tmp != e)
       {
@@ -520,6 +523,7 @@ bool Expr::defeq(Expr *e)
         tmp->dec();
         return b;
       }
+      */
       break;
     }
     case NOT_CEXPR:
@@ -530,16 +534,19 @@ bool Expr::defeq(Expr *e)
           HoleExpr *h = (HoleExpr *)e;
           if (h->val) return defeq(h->val);
 
+          Expr * tmp = this;
+          if (op1==APP)
+          {
+            tmp = ((CExpr*) tmp)->whr();
+          }
+#ifdef USE_HOLE_PATH_COMPRESSION
+          tmp = tmp->followDefs();
+#endif
 #ifdef DEBUG_HOLES
-          cout << "Filling hole ";
+          cout << "[3.1] Filling hole ";
           h->debug();
           cout << "with ";
-          debug();
-#endif
-#ifdef USE_HOLE_PATH_COMPRESSION
-          Expr *tmp = followDefs();
-#else
-          Expr *tmp = this;
+          tmp->debug();
 #endif
           h->val = tmp;
           tmp->inc();
@@ -623,6 +630,7 @@ bool Expr::defeq(Expr *e)
             if (!e2->kids[counter]
                 || !e1->kids[counter]->defeq(e2->kids[counter]))
             {
+              //std::cout << "...failed current app " << this << std::endl;
               success = false;
               break;
             }
@@ -651,8 +659,12 @@ bool Expr::defeq(Expr *e)
         }
         if (success && e2->kids[counter] == NULL)
         {
+          //Expr *tmp = ((CExpr *)this)->whr();
+          //Expr *tmpe = ((CExpr *)e)->whr();
+          //std::cout << "...success current APP " << this << std::endl;
           return true;
         }
+        break;
       }
       case TYPE:
       case KIND:
@@ -667,6 +679,7 @@ bool Expr::defeq(Expr *e)
     Expr *tmp = ((CExpr *)this)->whr();
     if (tmp != this)
     {
+      //std::cout << "Try whr of LHS" << std::endl;
       bool b = tmp->defeq(e);
       tmp->dec();
       return b;
@@ -678,6 +691,7 @@ bool Expr::defeq(Expr *e)
     Expr *tmp = ((CExpr *)e)->whr();
     if (tmp != e)
     {
+      //std::cout << "Try whr of RHS" << std::endl;
       bool b = defeq(tmp);
       tmp->dec();
       return b;
