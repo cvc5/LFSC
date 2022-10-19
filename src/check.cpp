@@ -35,6 +35,22 @@ std::vector<std::pair<std::string, std::pair<Expr *, Expr *> > >
 bool tail_calls = true;
 bool big_check = true;
 
+std::pair<Expr *, Expr *> insertAndBindSymbol(const char *s, SymSExpr * sym, Expr * e, Expr * t)
+{
+  if (e->getop()==APP)
+  {
+    Expr* er = ((CExpr *)e)->whr();
+    if (er!=e)
+    {
+      er->inc();
+      e->dec();
+      e = er;
+    }
+  }
+  sym->val = e;
+  return symbols->insert(s, std::pair<Expr *, Expr *>(sym, t));
+}
+
 Expr *call_run_code(Expr *code)
 {
   if (dbg_prog)
@@ -672,12 +688,14 @@ start_check:
                 for (int i = 0, iend = holes.size(); i < iend; i++)
                 {
                   if (!holes[i]->val)
+                  {
                     /* if the hole is free in the domain, we will be filling
                        it in when we make our tail call, since the domain
                        is the expected type for the argument */
                     if (!headtp_domain->free_in(holes[i]))
                       report_error(string("A hole was left unfilled after ")
                                    + string("checking an application.\n"));
+                  }
                   holes[i]->dec();
                 }
 
@@ -1139,9 +1157,8 @@ void check_file(std::istream& in,
           if (o == KIND)
             report_error(string("Kind-level definitions are not supported.\n"));
           SymSExpr* s = new SymSExpr(id);
-          s->val = t;
-          pair<Expr*, Expr*> prev =
-              symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, ttp));
+          // insert and bind the symbol
+          pair<Expr*, Expr*> prev = insertAndBindSymbol(id.c_str(), s, t, ttp);
           if (prev.first || prev.second)
           {
             rebind_error(id);
@@ -1249,9 +1266,7 @@ void check_file(std::istream& in,
                             {get<1>(binding), get<2>(binding)});
           }
           SymSExpr* s = new SymSExpr(id);
-          s->val = macro.first;
-          pair<Expr*, Expr*> prev =
-              symbols->insert(id.c_str(), {s, macro.second});
+          pair<Expr*, Expr*> prev = insertAndBindSymbol(id.c_str(), s, macro.first, macro.second);
           if (prev.first || prev.second)
           {
             rebind_error(id);
