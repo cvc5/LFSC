@@ -43,13 +43,15 @@ bool big_check = true;
  * We apply weak head reduction (whr) to the definition e. This is key to
  * performance, since we want to remember the result of this expansion.
  * Otherwise, additional copies of e->whr() will be generated each time we
- * require computing it.
+ * require computing it. Note that this is only done for the *top-level*
+ * application of e (if it is one). Subterms of e are not reduced in this way.
  */
 std::pair<Expr*, Expr*> insertAndBindSymbol(const char* s,
                                             SymExpr* sym,
                                             Expr* e,
                                             Expr* t)
 {
+  // apply whr() if possible to e
   if (e->getop() == APP)
   {
     Expr* er = ((CExpr*)e)->whr();
