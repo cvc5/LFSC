@@ -433,7 +433,6 @@ bool Expr::defeq(Expr *e)
     case ASCRIBE: return ((CExpr *)this)->kids[0]->defeq(e);
     case APP:
     {    
-      /*
       Expr *tmp = ((CExpr *)this)->whr();
       if (tmp != this)
       {
@@ -441,7 +440,6 @@ bool Expr::defeq(Expr *e)
         tmp->dec();
         return b;
       }
-      */
       if (get_head()->getclass() == HOLE_EXPR)
       {
         vector<Expr *> args;
@@ -515,7 +513,6 @@ bool Expr::defeq(Expr *e)
     case ASCRIBE: return defeq(((CExpr *)e)->kids[0]);
     case APP:
     {
-      /*
       Expr *tmp = ((CExpr *)e)->whr();
       if (tmp != e)
       {
@@ -523,7 +520,6 @@ bool Expr::defeq(Expr *e)
         tmp->dec();
         return b;
       }
-      */
       break;
     }
     case NOT_CEXPR:
@@ -534,19 +530,16 @@ bool Expr::defeq(Expr *e)
           HoleExpr *h = (HoleExpr *)e;
           if (h->val) return defeq(h->val);
 
-          Expr * tmp = this;
-          if (op1==APP)
-          {
-            tmp = ((CExpr*) tmp)->whr();
-          }
-#ifdef USE_HOLE_PATH_COMPRESSION
-          tmp = tmp->followDefs();
-#endif
 #ifdef DEBUG_HOLES
           cout << "[3.1] Filling hole ";
           h->debug();
           cout << "with ";
-          tmp->debug();
+          debug();
+#endif
+#ifdef USE_HOLE_PATH_COMPRESSION
+          Expr *tmp = followDefs();
+#else
+          Expr *tmp = this;
 #endif
           h->val = tmp;
           tmp->inc();
@@ -673,13 +666,14 @@ bool Expr::defeq(Expr *e)
         return true;
     }  // switch(op1)
   }
+  /*
   if (op1==APP)
   {
     // maybe weak head reduction?
     Expr *tmp = ((CExpr *)this)->whr();
     if (tmp != this)
     {
-      //std::cout << "Try whr of LHS" << std::endl;
+      std::cout << "Try whr of LHS" << std::endl;
       bool b = tmp->defeq(e);
       tmp->dec();
       return b;
@@ -691,12 +685,13 @@ bool Expr::defeq(Expr *e)
     Expr *tmp = ((CExpr *)e)->whr();
     if (tmp != e)
     {
-      //std::cout << "Try whr of RHS" << std::endl;
+      std::cout << "Try whr of RHS" << std::endl;
       bool b = defeq(tmp);
       tmp->dec();
       return b;
     }
   }
+  */
   return false;
   
 
