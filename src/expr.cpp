@@ -424,7 +424,7 @@ bool Expr::defeq(Expr *e)
   /* we handle a few special cases up front, where this Expr might
      equal e, even though they have different opclass (i.e., different
      structure). */
-  std::cout << "Compare " << this << " " << toString() << " " << e << " " << e->toString() << std::endl;
+  //std::cout << "Compare " << this << " " << toString() << " " << e << " " << e->toString() << std::endl;
 
   if (this == e) return true;
   int op1 = getop();
@@ -433,8 +433,7 @@ bool Expr::defeq(Expr *e)
   {
     case ASCRIBE: return ((CExpr *)this)->kids[0]->defeq(e);
     case APP:
-    {    
-      /*
+    { 
       Expr *tmp = ((CExpr *)this)->whr();
       if (tmp != this)
       {
@@ -442,7 +441,6 @@ bool Expr::defeq(Expr *e)
         tmp->dec();
         return b;
       }
-      */
       if (get_head()->getclass() == HOLE_EXPR)
       {
         vector<Expr *> args;
@@ -516,7 +514,6 @@ bool Expr::defeq(Expr *e)
     case ASCRIBE: return defeq(((CExpr *)e)->kids[0]);
     case APP:
     {
-      /*
       Expr *tmp = ((CExpr *)e)->whr();
       if (tmp != e)
       {
@@ -524,7 +521,6 @@ bool Expr::defeq(Expr *e)
         tmp->dec();
         return b;
       }
-      */
       break;
     }
     case NOT_CEXPR:
@@ -659,7 +655,7 @@ bool Expr::defeq(Expr *e)
         {
           //Expr *tmp = ((CExpr *)this)->whr();
           //Expr *tmpe = ((CExpr *)e)->whr();
-          std::cout << "...success current APP " << this << std::endl;
+          //std::cout << "...success current APP " << this << std::endl;
           return true;
         }
         break;
@@ -671,6 +667,7 @@ bool Expr::defeq(Expr *e)
         return true;
     }  // switch(op1)
   }
+  /*
   if (op1==APP)
   {
     // maybe weak head reduction?
@@ -695,6 +692,8 @@ bool Expr::defeq(Expr *e)
       return b;
     }
   }
+  std::cout << "...fallthrough fail " << this << std::endl;
+  */
   return false;
   
 
