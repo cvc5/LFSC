@@ -584,6 +584,7 @@ start_check:
           head_computed->dec();
           if (headtp->cloned())
           {
+            //std::cout << "Clone headtp " << headtp << " " << headtp->toString() << std::endl;
             // we must clone
             Expr *orig_headtp = headtp;
             headtp = (CExpr *)headtp->clone();
