@@ -35,6 +35,16 @@ std::vector<std::pair<std::string, std::pair<Expr *, Expr *> > >
 bool tail_calls = true;
 bool big_check = true;
 
+/**
+ * Defines that the variable sym should be bound to definition e. Adds s -> sym
+ * to the global symbol table (symbols). Returns the result of adding
+ * (sym, t) to the symbol table (Trie::insert).
+ *
+ * We apply weak head reduction (whr) to the definition e. This is key to
+ * performance, since we want to remember the result of this expansion.
+ * Otherwise, additional copies of e->whr() will be generated each time we
+ * require computing it.
+ */
 std::pair<Expr*, Expr*> insertAndBindSymbol(const char* s,
                                             SymExpr* sym,
                                             Expr* e,
