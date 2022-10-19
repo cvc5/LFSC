@@ -44,7 +44,7 @@ bool big_check = true;
  * performance, since we want to remember the result of this expansion.
  * Otherwise, additional copies of e->whr() will be generated each time we
  * require computing it. Note that this is only done for the *top-level*
- * application of e (if it is one). Subterms of e are not reduced in this way.
+ * application of e (if it is one). Other subterms of e are not reduced.
  */
 std::pair<Expr*, Expr*> insertAndBindSymbol(const char* s,
                                             SymExpr* sym,
