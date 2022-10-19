@@ -36,7 +36,7 @@ bool tail_calls = true;
 bool big_check = true;
 
 std::pair<Expr*, Expr*> insertAndBindSymbol(const char* s,
-                                            SymSExpr* sym,
+                                            SymExpr* sym,
                                             Expr* e,
                                             Expr* t)
 {
@@ -515,10 +515,7 @@ start_check:
           Expr *trm = check(true, NULL, &tp_of_trm);
           eat_excess(prev_open);
 
-          sym->val = trm;
-
-          pair<Expr *, Expr *> prevpr =
-              symbols->insert(id.c_str(), pair<Expr *, Expr *>(sym, tp_of_trm));
+          pair<Expr *, Expr *> prevpr = insertAndBindSymbol(id.c_str(), sym, trm, tp_of_trm);
           Expr *prev = prevpr.first;
           Expr *prevtp = prevpr.second;
 
