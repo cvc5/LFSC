@@ -35,12 +35,15 @@ std::vector<std::pair<std::string, std::pair<Expr *, Expr *> > >
 bool tail_calls = true;
 bool big_check = true;
 
-std::pair<Expr *, Expr *> insertAndBindSymbol(const char *s, SymSExpr * sym, Expr * e, Expr * t)
+std::pair<Expr*, Expr*> insertAndBindSymbol(const char* s,
+                                            SymSExpr* sym,
+                                            Expr* e,
+                                            Expr* t)
 {
-  if (e->getop()==APP)
+  if (e->getop() == APP)
   {
-    Expr* er = ((CExpr *)e)->whr();
-    if (er!=e)
+    Expr* er = ((CExpr*)e)->whr();
+    if (er != e)
     {
       er->inc();
       e->dec();
@@ -48,7 +51,7 @@ std::pair<Expr *, Expr *> insertAndBindSymbol(const char *s, SymSExpr * sym, Exp
     }
   }
   sym->val = e;
-  return symbols->insert(s, std::pair<Expr *, Expr *>(sym, t));
+  return symbols->insert(s, std::pair<Expr*, Expr*>(sym, t));
 }
 
 Expr *call_run_code(Expr *code)
@@ -1266,7 +1269,8 @@ void check_file(std::istream& in,
                             {get<1>(binding), get<2>(binding)});
           }
           SymSExpr* s = new SymSExpr(id);
-          pair<Expr*, Expr*> prev = insertAndBindSymbol(id.c_str(), s, macro.first, macro.second);
+          pair<Expr*, Expr*> prev =
+              insertAndBindSymbol(id.c_str(), s, macro.first, macro.second);
           if (prev.first || prev.second)
           {
             rebind_error(id);
