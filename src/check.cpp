@@ -515,7 +515,8 @@ start_check:
           Expr *trm = check(true, NULL, &tp_of_trm);
           eat_excess(prev_open);
 
-          pair<Expr *, Expr *> prevpr = insertAndBindSymbol(id.c_str(), sym, trm, tp_of_trm);
+          pair<Expr*, Expr*> prevpr =
+              insertAndBindSymbol(id.c_str(), sym, trm, tp_of_trm);
           Expr *prev = prevpr.first;
           Expr *prevtp = prevpr.second;
 
