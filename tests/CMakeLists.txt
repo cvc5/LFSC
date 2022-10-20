@@ -34,6 +34,8 @@ set(lfsc_test_file_list
   th_bv_bitblast.plf
   th_int.plf
   th_quant.plf
+  treesize-27.plf
+  treesize-27-let.plf
   unused_pi_param_rational_in_body.plf
   use-bool.plf
   use-use-bool.plf
