@@ -32,6 +32,10 @@
 (define __t21 (and __t20 __t20))
 (define __t22 (and __t21 __t21))
 (define __t23 (and __t22 __t22))
+(define __t24 (and __t23 __t23))
+(define __t25 (and __t24 __t24))
+(define __t26 (and __t25 __t25))
+(define __t27 (and __t26 __t26))
 
-(declare rule (! f (holds __t23) (holds true)))
-(check (: (holds true) (rule (trust __t23))))
+(declare rule (! f (holds __t27) (holds true)))
+(check (: (holds true) (rule (trust __t27))))
