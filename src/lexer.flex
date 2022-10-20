@@ -62,7 +62,6 @@ comment     ;[^\n]*\n
 "mp_ifneg"      return Token::MpIfNeg;
 "mp_ifzero"     return Token::MpIfZero;
 "mpz_to_mpq"    return Token::MpzToMpq;
-"compare"       return Token::Compare;
 "ifequal"       return Token::IfEqual;
 "fail"          return Token::Fail;
 

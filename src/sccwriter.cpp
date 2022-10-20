@@ -588,34 +588,6 @@ void sccwriter::write_code(
           write_dec(expr, os, ind);
         }
         break;
-        case COMPARE:
-        {
-          std::string expr1, expr2;
-          write_expr(((CExpr*)code)->kids[0],
-                     os,
-                     ind,
-                     expr1,
-                     opt_write_check_sym_expr);
-          write_expr(((CExpr*)code)->kids[1],
-                     os,
-                     ind,
-                     expr2,
-                     opt_write_check_sym_expr);
-          indent(os, ind);
-          os << "if( ((SymExpr*)" << expr1.c_str()
-             << ")->followDefs() < ((SymExpr*)" << expr2.c_str()
-             << ")->followDefs() ){" << std::endl;
-          write_code(((CExpr*)code)->kids[2], os, ind + 1, retModStr);
-          indent(os, ind);
-          os << "}else{" << std::endl;
-          write_code(((CExpr*)code)->kids[3], os, ind + 1, retModStr);
-          indent(os, ind);
-          os << "}" << std::endl;
-          // clean up memory
-          write_dec(expr1, os, ind);
-          write_dec(expr2, os, ind);
-        }
-        break;
         case IFEQUAL:
         {
           std::string expr1, expr2;
@@ -963,7 +935,6 @@ void sccwriter::debug_write_code(Expr* code, std::ostream& os, int ind)
         case FAIL: os << "fail"; break;
         case MARKVAR: os << "markvar"; break;
         case IFMARKED: os << "ifmarked"; break;
-        case COMPARE: os << "compare"; break;
         default: os << "???"; break;
       }
   }

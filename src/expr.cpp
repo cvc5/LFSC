@@ -998,11 +998,6 @@ void Expr::print(ostream &os) const
       print_kids(os, e->kids);
       os << ")";
       break;
-    case COMPARE:
-      os << "(compare";
-      print_kids(os, e->kids);
-      os << ")";
-      break;
     case IFEQUAL:
       os << "(ifequal";
       print_kids(os, e->kids);
