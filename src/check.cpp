@@ -1394,6 +1394,8 @@ void check_file(std::istream& in,
             report_error(string("Redeclaring program ") + progstr
                          + string("."));
           progs[progstr] = prog;
+          // if used the "method" keyword, we mark the program as a method
+          // such that its results are cached in calls to run_code.
           if (c == Token::Method)
           {
             markMethod(prog);
