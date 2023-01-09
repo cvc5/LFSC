@@ -40,6 +40,7 @@ set(lfsc_test_file_list
   use-bool.plf
   use-use-bool.plf
   whr-match.plf
+  subs-27-let.plf
   sugar_arrow.plf
   sugar_assuming.plf
   sugar_declare_rule.plf

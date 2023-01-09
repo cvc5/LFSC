@@ -820,24 +820,30 @@ void dbg_prog_indent(std::ostream &os)
 {
   for (int i = 0; i < dbg_prog_indent_lvl; i++) os << " ";
 }
-/** A simple cache for programs */
+/**
+ * A simple cache, used for caching the results of invocations of methods in
+ * side conditions. It is a trie that stores lists of expressions. It
+ * internally ref-counts the data and edges.
+ */
 class ExprTrie
 {
  public:
   ExprTrie() : d_data(nullptr) {}
   ~ExprTrie()
   {
+    // decrement data if it exists, as well as all child edges
     if (d_data != nullptr)
     {
-      // d_data->dec();
+      //d_data->dec();
     }
     for (std::map<Expr*, ExprTrie>::iterator it = d_children.begin();
          it != d_children.end();
          ++it)
     {
-      // it->first->dec();
+      it->first->dec();
     }
   }
+  /** Get the trie for the input string args */
   ExprTrie* get(const std::vector<Expr*>& args)
   {
     ExprTrie* curr = this;
@@ -857,16 +863,19 @@ class ExprTrie
     }
     return curr;
   }
+  /** Get the data at this node */
   Expr* getData() { return d_data; }
+  /** Set the data at this node */
   void setData(Expr* d)
   {
     assert(d_data == nullptr);
     d_data = d;
     d_data->inc();
   }
-
  private:
+  /** The data */
   Expr* d_data;
+  /** The children */
   std::map<Expr*, ExprTrie> d_children;
 };
 
@@ -1258,7 +1267,6 @@ start_run_code:
       SymExpr *var;
       size_t i = 0;
       Expr* head = e->get_head(false);
-      bool callUseCache = useCacheForProgram(head);
       if (run_scc && head->getclass() == SYMS_EXPR)
       {
         // std::cout << "running " << ((SymSExpr*)e->get_head( false
@@ -1309,7 +1317,11 @@ start_run_code:
         }
         dbg_prog_indent_lvl++;
 
+        // Check whether the called program should cache its results. If so,
+        // we use the current cache, which is global to the overall invocation
+        // of run_code.
         ExprTrie* currLookup = nullptr;
+        bool callUseCache = useCacheForProgram(head);
         if (callUseCache)
         {
           std::vector<Expr*> largs;
