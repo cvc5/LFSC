@@ -1370,7 +1370,7 @@ void check_file(std::istream& in,
           check_code(code);
           cout << "[Running-sc ";
           code->print(cout);
-          Expr* tmp = run_code(code);
+          Expr* tmp = call_run_code(code);
           cout << "] = \n";
           if (tmp)
           {
