@@ -8,7 +8,7 @@
 (declare f_and term)
 (define and (# t1 term (# t2 term (apply (apply f_and t1) t2))))
 
-(program sc_substitute ((t term) (s term) (r term)) term
+(method sc_substitute ((t term) (s term) (r term)) term
   (match t
     ((apply t1 t2) (apply (sc_substitute t1 s r) (sc_substitute t2 s r)))
     (default (ifequal t s r t))

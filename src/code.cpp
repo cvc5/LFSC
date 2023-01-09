@@ -10,6 +10,9 @@
 
 using namespace std;
 
+/** The subset of programs that are methods */
+std::unordered_set<Expr*> progMethods;
+
 // Returns null on "default"
 SymSExpr *read_ctor()
 {
@@ -880,12 +883,6 @@ class ExprTrie
   std::map<Expr*, ExprTrie> d_children;
 };
 
-/**
- * Returns true if head specifies a program that was marked as a "method",
- * i.e. its results can be cached.
- */
-bool useCacheForProgram(Expr* head) { return true; }
-
 Expr* run_code_internal(Expr* _e, bool useCache, ExprTrie& cache)
 {
 start_run_code:
@@ -1322,7 +1319,7 @@ start_run_code:
         // we use the current cache, which is global to the overall invocation
         // of run_code.
         ExprTrie* currLookup = nullptr;
-        bool callUseCache = useCacheForProgram(head);
+        bool callUseCache = (progMethods.find(head)!=progMethods.end());
         if (callUseCache)
         {
           std::vector<Expr*> largs;
@@ -1381,4 +1378,9 @@ Expr* run_code(Expr* _e)
 {
   ExprTrie cache;
   return run_code_internal(_e, false, cache);
+}
+
+void markMethod(Expr * s)
+{
+  progMethods.insert(s);
 }
