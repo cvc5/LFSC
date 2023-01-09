@@ -837,7 +837,7 @@ class ExprTrie
     // decrement data if it exists, as well as all child edges
     if (d_data != nullptr)
     {
-      // d_data->dec();
+      d_data->dec();
     }
     for (std::map<Expr*, ExprTrie>::iterator it = d_children.begin();
          it != d_children.end();
@@ -1330,6 +1330,7 @@ start_run_code:
           Expr* currData = currLookup->getData();
           if (currData != nullptr)
           {
+            currData->inc();
             return currData;
           }
         }
