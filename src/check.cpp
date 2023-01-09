@@ -1394,7 +1394,7 @@ void check_file(std::istream& in,
             report_error(string("Redeclaring program ") + progstr
                          + string("."));
           progs[progstr] = prog;
-          if (c==Token::Method)
+          if (c == Token::Method)
           {
             markMethod(prog);
           }

@@ -1319,7 +1319,7 @@ start_run_code:
         // we use the current cache, which is global to the overall invocation
         // of run_code.
         ExprTrie* currLookup = nullptr;
-        bool callUseCache = (progMethods.find(head)!=progMethods.end());
+        bool callUseCache = (progMethods.find(head) != progMethods.end());
         if (callUseCache)
         {
           std::vector<Expr*> largs;
@@ -1380,7 +1380,4 @@ Expr* run_code(Expr* _e)
   return run_code_internal(_e, false, cache);
 }
 
-void markMethod(Expr * s)
-{
-  progMethods.insert(s);
-}
+void markMethod(Expr* s) { progMethods.insert(s); }

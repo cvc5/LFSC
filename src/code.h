@@ -10,11 +10,11 @@ Expr *check_code(Expr *);  // compute the type for the given code
  * Return the result of running the code e.
  * @param e The code to run
  */
-Expr *run_code(Expr * e);
+Expr* run_code(Expr* e);
 /**
  * Mark that program s is a method.
  */
-void markMethod(Expr * s);
+void markMethod(Expr* s);
 
 extern bool dbg_prog;
 extern bool run_scc;
