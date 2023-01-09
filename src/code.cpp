@@ -825,8 +825,8 @@ void dbg_prog_indent(std::ostream &os)
 }
 /**
  * A simple cache, used for caching the results of invocations of methods in
- * side conditions. It is a trie that stores lists of expressions. It
- * internally ref-counts the data and edges.
+ * side conditions. It is a trie that maps lists of expressions to a result
+ * expression. It internally ref-counts the data and edges.
  */
 class ExprTrie
 {
@@ -883,6 +883,14 @@ class ExprTrie
   std::map<Expr*, ExprTrie> d_children;
 };
 
+/**
+ * Run code internal
+ *
+ * @param e The code to run
+ * @param useCache Whether to cache the results of program (method) invocations.
+ * If this is true, we are in the body of a method.
+ * @param cache The cache of results of program (method) invocations
+ */
 Expr* run_code_internal(Expr* _e, bool useCache, ExprTrie& cache)
 {
 start_run_code:
