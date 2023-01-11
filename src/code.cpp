@@ -10,6 +10,9 @@
 
 using namespace std;
 
+/** The subset of programs that are methods */
+std::unordered_set<Expr*> progFunctions;
+
 // Returns null on "default"
 SymSExpr *read_ctor()
 {
@@ -820,8 +823,75 @@ void dbg_prog_indent(std::ostream &os)
 {
   for (int i = 0; i < dbg_prog_indent_lvl; i++) os << " ";
 }
+/**
+ * A simple cache, used for caching the results of invocations of methods in
+ * side conditions. It is a trie that maps lists of expressions to a result
+ * expression. It internally ref-counts the data and edges.
+ */
+class ExprTrie
+{
+ public:
+  ExprTrie() : d_data(nullptr) {}
+  ~ExprTrie()
+  {
+    // decrement data if it exists, as well as all child edges
+    if (d_data != nullptr)
+    {
+      d_data->dec();
+    }
+    for (std::map<Expr*, ExprTrie>::iterator it = d_children.begin();
+         it != d_children.end();
+         ++it)
+    {
+      it->first->dec();
+    }
+  }
+  /** Get the trie for the input string args */
+  ExprTrie* get(const std::vector<Expr*>& args)
+  {
+    ExprTrie* curr = this;
+    std::map<Expr*, ExprTrie>::iterator itc;
+    for (Expr* e : args)
+    {
+      itc = curr->d_children.find(e);
+      if (itc == curr->d_children.end())
+      {
+        e->inc();
+        curr = &curr->d_children[e];
+      }
+      else
+      {
+        curr = &itc->second;
+      }
+    }
+    return curr;
+  }
+  /** Get the data at this node */
+  Expr* getData() { return d_data; }
+  /** Set the data at this node */
+  void setData(Expr* d)
+  {
+    assert(d_data == nullptr);
+    d_data = d;
+    d_data->inc();
+  }
 
-Expr *run_code(Expr *_e)
+ private:
+  /** The data */
+  Expr* d_data;
+  /** The children */
+  std::map<Expr*, ExprTrie> d_children;
+};
+
+/**
+ * Run code internal
+ *
+ * @param e The code to run
+ * @param useCache Whether to cache the results of program (method) invocations.
+ * If this is true, we are in the body of a method.
+ * @param cache The cache of results of program (method) invocations
+ */
+Expr* run_code_internal(Expr* _e, bool useCache, ExprTrie& cache)
 {
 start_run_code:
   CExpr *e = (CExpr *)_e;
@@ -866,7 +936,7 @@ start_run_code:
     case FAIL: return NULL;
     case DO:
     {
-      Expr *tmp = run_code(e->kids[0]);
+      Expr* tmp = run_code_internal(e->kids[0], useCache, cache);
       if (!tmp) return NULL;
       tmp->dec();
       _e = e->kids[1];
@@ -874,12 +944,12 @@ start_run_code:
     }
     case LET:
     {
-      Expr *r0 = run_code(e->kids[1]);
+      Expr* r0 = run_code_internal(e->kids[1], useCache, cache);
       if (!r0) return NULL;
       SymExpr *var = (SymExpr *)e->kids[0];
       Expr *prev = var->val;
       var->val = r0;
-      Expr *r1 = run_code(e->kids[2]);
+      Expr* r1 = run_code_internal(e->kids[2], useCache, cache);
       var->val = prev;
       r0->dec();
       return r1;
@@ -888,9 +958,9 @@ start_run_code:
     case MUL:
     case DIV:
     {
-      Expr *r1 = run_code(e->kids[0]);
+      Expr* r1 = run_code_internal(e->kids[0], useCache, cache);
       if (!r1) return NULL;
-      Expr *r2 = run_code(e->kids[1]);
+      Expr* r2 = run_code_internal(e->kids[1], useCache, cache);
       if (!r2) return NULL;
       if (r1->getclass() == INT_EXPR && r2->getclass() == INT_EXPR)
       {
@@ -956,7 +1026,7 @@ start_run_code:
     }
     case NEG:
     {
-      Expr *r1 = run_code(e->kids[0]);
+      Expr* r1 = run_code_internal(e->kids[0], useCache, cache);
       if (!r1) return NULL;
       if (r1->getclass() == INT_EXPR)
       {
@@ -986,7 +1056,7 @@ start_run_code:
     }
     case MPZ_TO_MPQ:
     {
-      Expr *r1 = run_code(e->kids[0]);
+      Expr* r1 = run_code_internal(e->kids[0], useCache, cache);
       if (!r1) return NULL;
       mpq_t r;
       mpq_init(r);
@@ -996,7 +1066,7 @@ start_run_code:
     case IFNEG:
     case IFZERO:
     {
-      Expr *r1 = run_code(e->kids[0]);
+      Expr* r1 = run_code_internal(e->kids[0], useCache, cache);
       if (!r1) return NULL;
 
       bool cond = true;
@@ -1031,7 +1101,14 @@ start_run_code:
     }
     case IFMARKED:
     {
-      Expr *r1 = run_code(e->kids[1]);
+      // We should never check marks within methods, since the state of marks
+      // is not cached.
+      if (useCache)
+      {
+        std::cout << "An ifmarked was used within a method." << std::endl;
+        return nullptr;
+      }
+      Expr* r1 = run_code_internal(e->kids[1], useCache, cache);
       if (!r1) return NULL;
       if (r1->getclass() != SYM_EXPR && r1->getclass() != SYMS_EXPR)
       {
@@ -1051,14 +1128,14 @@ start_run_code:
     }
     case COMPARE:
     {
-      Expr *r1 = run_code(e->kids[0]);
+      Expr* r1 = run_code_internal(e->kids[0], useCache, cache);
       if (!r1) return NULL;
       if (r1->getclass() != SYM_EXPR && r1->getclass() != SYMS_EXPR)
       {
         r1->dec();
         return NULL;
       }
-      Expr *r2 = run_code(e->kids[1]);
+      Expr* r2 = run_code_internal(e->kids[1], useCache, cache);
       if (!r2) return NULL;
       if (r2->getclass() != SYM_EXPR && r2->getclass() != SYMS_EXPR)
       {
@@ -1080,9 +1157,9 @@ start_run_code:
     }
     case IFEQUAL:
     {
-      Expr *r1 = run_code(e->kids[0]);
+      Expr* r1 = run_code_internal(e->kids[0], useCache, cache);
       if (!r1) return NULL;
-      Expr *r2 = run_code(e->kids[1]);
+      Expr* r2 = run_code_internal(e->kids[1], useCache, cache);
       if (!r2) return NULL;
       if (r1->defeq(r2))
       {
@@ -1099,7 +1176,7 @@ start_run_code:
     }
     case MARKVAR:
     {
-      Expr *r1 = run_code(e->kids[1]);
+      Expr* r1 = run_code_internal(e->kids[1], useCache, cache);
       if (!r1) return NULL;
       if (r1->getclass() != SYM_EXPR && r1->getclass() != SYMS_EXPR)
       {
@@ -1114,7 +1191,7 @@ start_run_code:
     }
     case MATCH:
     {
-      Expr *scrut = run_code(e->kids[0]);
+      Expr* scrut = run_code_internal(e->kids[0], useCache, cache);
       if (!scrut) return 0;
       // Apply WHR to c-expressions, otherwise you don't really know the head.
       if (scrut->getclass() == CEXPR)
@@ -1139,7 +1216,7 @@ start_run_code:
           // std::cout << "run the default " << std::endl;
           // c_or_default->print( std::cout );
           // this is the default of the MATCH
-          return run_code(c_or_default);
+          return run_code_internal(c_or_default, useCache, cache);
         }
 
         // this is a CASE of the MATCH
@@ -1159,7 +1236,8 @@ start_run_code:
             args[j]->inc();
           }
           scrut->dec();
-          Expr *ret = run_code(c->kids[1] /* the body of the case */);
+          // run the body of the case
+          Expr* ret = run_code_internal(c->kids[1], useCache, cache);
           for (int j = 0; j < jend; j++)
           {
             ((SymExpr *)vars[j])->val = old_vals[j];
@@ -1175,7 +1253,7 @@ start_run_code:
       vector<Expr *> args;
       Expr *hd = e->collect_args(args);
       for (int i = 0, iend = args.size(); i < iend; i++)
-        if (!(args[i] = run_code(args[i])))
+        if (!(args[i] = run_code_internal(args[i], useCache, cache)))
         {
           for (int j = 0; j < i; j++) args[j]->dec();
           return NULL;
@@ -1194,13 +1272,13 @@ start_run_code:
       vector<Expr *> old_vals;
       SymExpr *var;
       size_t i = 0;
-
-      if (run_scc && e->get_head(false)->getclass() == SYMS_EXPR)
+      Expr* head = e->get_head(false);
+      if (run_scc && head->getclass() == SYMS_EXPR)
       {
         // std::cout << "running " << ((SymSExpr*)e->get_head( false
         // ))->s.c_str() << " with " << (int)args.size() << " arguments" <<
         // std::endl;
-        Expr *ret = run_compiled_scc(e->get_head(false), args);
+        Expr* ret = run_compiled_scc(head, args);
         for (int i = 0, iend = args.size(); i < iend; i++)
         {
           args[i]->dec();
@@ -1245,7 +1323,34 @@ start_run_code:
         }
         dbg_prog_indent_lvl++;
 
-        Expr *ret = run_code(prog->kids[2]);
+        // Check whether the called program should cache its results. If so,
+        // we use the current cache, which is global to the overall invocation
+        // of run_code.
+        ExprTrie* currLookup = nullptr;
+        bool callUseCache = (progFunctions.find(head) != progFunctions.end());
+        if (callUseCache)
+        {
+          std::vector<Expr*> largs;
+          largs.push_back(head);
+          largs.insert(largs.end(), args.begin(), args.end());
+          currLookup = cache.get(largs);
+          // check if already cached
+          Expr* currData = currLookup->getData();
+          if (currData != nullptr)
+          {
+            currData->inc();
+            return currData;
+          }
+        }
+        else if (useCache)
+        {
+          // a program embedded in a method
+          std::cout << "A program " << head->toString()
+                    << " was used within a method." << std::endl;
+          return nullptr;
+        }
+
+        Expr* ret = run_code_internal(prog->kids[2], callUseCache, cache);
 
         dbg_prog_indent_lvl--;
         if (dbg_prog)
@@ -1267,9 +1372,21 @@ start_run_code:
           args[i]->dec();
           var->val = old_vals[i++];
         }
+        if (callUseCache)
+        {
+          currLookup->setData(ret);
+        }
         return ret;
       }
     }
   }  // end switch
   return NULL;
 }
+
+Expr* run_code(Expr* _e)
+{
+  ExprTrie cache;
+  return run_code_internal(_e, false, cache);
+}
+
+void markProgramAsFunction(Expr* s) { progFunctions.insert(s); }

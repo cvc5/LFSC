@@ -12,6 +12,7 @@ enum Token : int
   Define,
   Check,
   Program,
+  Function,
   Opaque,
   Run,
 

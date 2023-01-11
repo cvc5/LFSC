@@ -22,7 +22,9 @@ using namespace std;
 using namespace __gnu_cxx;
 #endif
 
+/** Map from program names to expressions */
 symmap2 progs;
+
 std::vector<Expr *> ascHoles;
 
 Trie<pair<Expr *, Expr *> > *symbols = new Trie<pair<Expr *, Expr *> >;
@@ -1370,7 +1372,7 @@ void check_file(std::istream& in,
           check_code(code);
           cout << "[Running-sc ";
           code->print(cout);
-          Expr* tmp = run_code(code);
+          Expr* tmp = call_run_code(code);
           cout << "] = \n";
           if (tmp)
           {
@@ -1384,6 +1386,7 @@ void check_file(std::istream& in,
           break;
         }
         case Token::Program:
+        case Token::Function:
         {
           string progstr(prefix_id());
           SymSExpr* prog = new SymSExpr(progstr);
@@ -1391,6 +1394,12 @@ void check_file(std::istream& in,
             report_error(string("Redeclaring program ") + progstr
                          + string("."));
           progs[progstr] = prog;
+          // if used the "function" keyword, we mark the program as a function
+          // such that its results are cached in calls to run_code.
+          if (c == Token::Function)
+          {
+            markProgramAsFunction(prog);
+          }
           eat_token(Token::Open);
           Token::Token d;
           vector<Expr*> vars;
