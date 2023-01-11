@@ -12,9 +12,9 @@ Expr *check_code(Expr *);  // compute the type for the given code
  */
 Expr* run_code(Expr* e);
 /**
- * Mark that program s is a method.
+ * Mark that program s is a function (its results are cached).
  */
-void markMethod(Expr* s);
+void markProgramAsFunction(Expr* s);
 
 extern bool dbg_prog;
 extern bool run_scc;

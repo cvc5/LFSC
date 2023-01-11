@@ -14,7 +14,7 @@ std::ostream& operator<<(std::ostream& o, Token t)
     case Opaque : return o << "Opaque";
     case Run : return o << "Run";
     case Program: return o << "Program";
-    case Method: return o << "Method";
+    case Function: return o << "Function";
     case Type: return o << "Type";
     case Percent: return o << "Percent";
     case Bang: return o << "Bang";

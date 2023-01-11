@@ -34,7 +34,7 @@ comment     ;[^\n]*\n
 "define"        return Token::Define;
 "check"         return Token::Check;
 "program"       return Token::Program;
-"method"        return Token::Method;
+"function"      return Token::Function;
 "opaque"        return Token::Opaque;
 "run"           return Token::Run;
 

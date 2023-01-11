@@ -11,7 +11,7 @@
 using namespace std;
 
 /** The subset of programs that are methods */
-std::unordered_set<Expr*> progMethods;
+std::unordered_set<Expr*> progFunctions;
 
 // Returns null on "default"
 SymSExpr *read_ctor()
@@ -1327,7 +1327,7 @@ start_run_code:
         // we use the current cache, which is global to the overall invocation
         // of run_code.
         ExprTrie* currLookup = nullptr;
-        bool callUseCache = (progMethods.find(head) != progMethods.end());
+        bool callUseCache = (progFunctions.find(head) != progFunctions.end());
         if (callUseCache)
         {
           std::vector<Expr*> largs;
@@ -1389,4 +1389,4 @@ Expr* run_code(Expr* _e)
   return run_code_internal(_e, false, cache);
 }
 
-void markMethod(Expr* s) { progMethods.insert(s); }
+void markProgramAsFunction(Expr* s) { progFunctions.insert(s); }

@@ -1386,7 +1386,7 @@ void check_file(std::istream& in,
           break;
         }
         case Token::Program:
-        case Token::Method:
+        case Token::Function:
         {
           string progstr(prefix_id());
           SymSExpr* prog = new SymSExpr(progstr);
@@ -1394,11 +1394,11 @@ void check_file(std::istream& in,
             report_error(string("Redeclaring program ") + progstr
                          + string("."));
           progs[progstr] = prog;
-          // if used the "method" keyword, we mark the program as a method
+          // if used the "function" keyword, we mark the program as a function
           // such that its results are cached in calls to run_code.
-          if (c == Token::Method)
+          if (c == Token::Function)
           {
-            markMethod(prog);
+            markProgramAsFunction(prog);
           }
           eat_token(Token::Open);
           Token::Token d;
