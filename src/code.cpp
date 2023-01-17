@@ -1372,7 +1372,7 @@ start_run_code:
           args[i]->dec();
           var->val = old_vals[i++];
         }
-        if (callUseCache)
+        if (callUseCache && ret != NULL)
         {
           currLookup->setData(ret);
         }
