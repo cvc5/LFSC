@@ -33,6 +33,7 @@ endif()
 
 # For macOS, homebrew
 list(APPEND CMAKE_PREFIX_PATH "/usr/local/opt/flex")
+list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew/opt/flex")
 find_package(FLEX REQUIRED)
 if (FLEX_FOUND AND NOT ${FLEX_INCLUDE_DIRS} STREQUAL "FLEX_INCLUDE_DIR-NOTFOUND")
     message(STATUS "Flex include directories: ${FLEX_INCLUDE_DIRS}")
