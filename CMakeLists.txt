@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.9)
+cmake_minimum_required (VERSION 3.9)
 
 macro(add_cxx_flag flag)
   message(STATUS "Configure with flag '${flag}'")
@@ -31,7 +31,17 @@ else()
   message(FATAL_ERROR "Invalid build type '${CMAKE_BUILD_TYPE}'")
 endif()
 
+# For macOS, homebrew
+list(APPEND CMAKE_PREFIX_PATH "/usr/local/opt/flex")
 find_package(FLEX REQUIRED)
+if (FLEX_FOUND AND NOT ${FLEX_INCLUDE_DIRS} STREQUAL "FLEX_INCLUDE_DIR-NOTFOUND")
+    message(STATUS "Flex include directories: ${FLEX_INCLUDE_DIRS}")
+    message(STATUS "Flex executable: ${FLEX_EXECUTABLE}")
+    message(STATUS "Flex version: ${FLEX_VERSION}")
+else()
+  message(FATAL_ERROR "Could not find flex!")
+  exit()
+endif()
 
 enable_testing()
 

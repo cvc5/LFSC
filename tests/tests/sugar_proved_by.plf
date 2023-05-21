@@ -1,0 +1,9 @@
+(declare bool type)
+(declare tt bool)
+(declare ff bool)
+
+(declare holds (! b bool type))
+
+(check (% b bool
+       (% b_pf (holds b)
+       (proved-by (holds b) b_pf))))

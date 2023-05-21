@@ -12,6 +12,7 @@
 #include "gmp.h"
 
 #define DEBUG_SYM_NAMES
+// Uncomment for verbose printing of symbols
 //#define DEBUG_SYMS
 
 // Expr class
@@ -118,7 +119,6 @@ class Expr
  public:
   virtual ~Expr() {}
 
-  static int markedCount;
   inline Expr *followDefs();
   inline int getclass() const { return data & 7; }
   int getexmark() const { return data & 256; }
@@ -132,13 +132,7 @@ class Expr
   inline void inc()
   {
     int ref = getrefcnt();
-    // static int iCounter = 0;
-    // iCounter++;
-    // if( iCounter%10000==0 ){
-    //   //print( std::cout );
-    //   std::cout << " " << ref << std::endl;
-    //}
-    ref = ref < 4194303 ? ref + 1 : ref;
+    ref = ref < d_maxRefCount ? ref + 1 : ref;
 #ifdef DEBUG_REFCNT
     debugrefcnt(ref, INC);
 #endif
@@ -148,7 +142,7 @@ class Expr
   inline void dec(bool dec_kids = true)
   {
     int ref = getrefcnt();
-    ref = ref - 1;
+    ref = ref < d_maxRefCount ? ref - 1 : ref;
 #ifdef DEBUG_REFCNT
     debugrefcnt(ref, DEC);
 #endif
@@ -165,7 +159,6 @@ class Expr
   {
     return getclass() == SYMS_EXPR || getop() == MPZ || getop() == MPQ;
   }
-  inline bool isArithTerm() const { return getop() == ADD || getop() == NEG; }
   inline bool isSymbolic() const
   {
     return getclass() == SYM_EXPR || getclass() == SYMS_EXPR;
@@ -180,7 +173,7 @@ class Expr
   /* if this is an APP, return the head, and store the args in args.
      If follow_defs is true, we proceed through defined heads;
      otherwise not. */
-  Expr *collect_args(std::vector<Expr *> &args, bool follow_defs = true);
+  Expr *collect_args(std::vector<Expr *> &args, bool follow_defs = true) const;
 
   Expr *get_head(bool follow_defs = true) const;
 
@@ -188,7 +181,7 @@ class Expr
 
   std::string toString();
 
-  void print(std::ostream &);
+  void print(std::ostream &) const;
   void debug();
 
   /* check whether or not this expr is alpha equivalent to e.  If this
@@ -213,6 +206,9 @@ class Expr
 
   static int cargCount;
   static int fiCounter;
+private:
+  /** The maximum reference count value, 2^22-1. */
+  static int d_maxRefCount;
 };
 
 class CExpr : public Expr
@@ -345,7 +341,6 @@ class SymExpr : public Expr
 {
  public:
   Expr *val;  // may be set by beta-reduction and clone().
-  static int symmCount;
 
   SymExpr(std::string _s, int theclass = SYM_EXPR) : Expr(theclass, 0), val(0)
   {
@@ -437,5 +432,7 @@ inline Expr *Expr::followDefs()
 
   return this;
 }
+
+std::ostream& operator<<(std::ostream& o, const Expr& e);
 
 #endif

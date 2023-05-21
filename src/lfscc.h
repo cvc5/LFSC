@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <vector>
+#include <istream>
 
 class sccwriter;
 class libwriter;
@@ -16,9 +17,7 @@ void lfscc_check_file(const char* filename,
                       bool compile_scc_debug,
                       bool run_scc,
                       bool use_nested_app,
-                      bool compile_lib,
-                      sccwriter* scw = NULL,
-                      libwriter* lw = NULL);
+                      sccwriter* scw = nullptr);
 
 void lfscc_check_file(std::istream& in,
                       bool show_runs,
@@ -27,9 +26,7 @@ void lfscc_check_file(std::istream& in,
                       bool compile_scc_debug,
                       bool run_scc,
                       bool use_nested_app,
-                      bool compile_lib,
-                      sccwriter* scw = NULL,
-                      libwriter* lw = NULL);
+                      sccwriter* scw = nullptr);
 
 void lfscc_cleanup();
 

@@ -4,6 +4,7 @@ import re
 import os.path
 import sys
 import subprocess
+import resource
 
 class TestConfiguration(object):
     ''' Represents a test to run.  '''
@@ -32,6 +33,7 @@ Dependencies:
         self.lfscc = sys.argv[1]
         self.path = sys.argv[2]
         self.dep_graph = DepGraph(self.path)
+        self.file = TestFile(self.path)
 
 class DepGraph(object):
     ''' Represents a dependency graph of LFSC input files '''
@@ -101,15 +103,36 @@ class TestFile(object):
         self.config_map = m
 
 def main():
+    # Units: bytes
+    soft, hard = resource.getrlimit(resource.RLIMIT_STACK)
+    resource.setrlimit(resource.RLIMIT_STACK, (min(2**25, hard), hard))
     configuration = TestConfiguration()
     cmd = [configuration.lfscc] + configuration.dep_graph.getPathsInOrder()
     print('Command: ', cmd)
     result = subprocess.Popen(cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
     (stdout, _) = result.communicate()
-    if 0 != result.returncode:
-        if stdout:
-            print(stdout.decode())
-    return result.returncode
+    print(configuration.file.config_map)
+    if 'errorline' in configuration.file.config_map:
+        lineno = int(configuration.file.config_map['errorline'].strip())
+        if 0 == result.returncode:
+            print("Should have errored but did not")
+            return 1
+        else:
+            act_lineno_g = re.search(r' at (\d+):', stdout.decode())
+            if act_lineno_g is None:
+                print("Cannot find error line #")
+                return 1
+            act_lineno = int(act_lineno_g.group(1))
+            if lineno != act_lineno:
+                print("Should have errored on line {} but errored on line {}".format(lineno, act_lineno))
+                return 1
+            return 0
+    else:
+        if 0 != result.returncode:
+            print("Exited with code {}".format(result.returncode))
+            if stdout:
+                print(stdout.decode())
+        return result.returncode
 
 if __name__ == '__main__':
     sys.exit(main())

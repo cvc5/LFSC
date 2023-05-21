@@ -5,7 +5,16 @@
 
 Expr *read_code();
 Expr *check_code(Expr *);  // compute the type for the given code
-Expr *run_code(Expr *);
+
+/**
+ * Return the result of running the code e.
+ * @param e The code to run
+ */
+Expr* run_code(Expr* e);
+/**
+ * Mark that program s is a function (its results are cached).
+ */
+void markProgramAsFunction(Expr* s);
 
 extern bool dbg_prog;
 extern bool run_scc;

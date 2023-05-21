@@ -160,7 +160,7 @@
 		       	(! xb bblt
 		       	(! rb bblt
 		       	(! xbb (bblast_term m x xb)
-			(! c ( ^ (bblast_zextend xb k m) rb)
+			(! c ( ^ (bblast_zextend xb k) rb)
                            (bblast_term n (zero_extend n k m x) rb))))))))))
 
 (program bblast_sextend ((x bblt) (i mpz)) bblt

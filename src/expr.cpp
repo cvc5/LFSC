@@ -10,7 +10,8 @@
 using namespace std;
 
 int HoleExpr::next_id = 0;
-int Expr::markedCount = 0;
+// Maximum reference count, 2^22-1
+int Expr::d_maxRefCount = 4194303;
 
 C_MACROS__ADD_CHUNKING_MEMORY_MANAGEMENT_CC(CExpr, kids, 32768);
 
@@ -31,19 +32,19 @@ void Expr::debug()
 
 bool destroy_progs = false;
 
-#define destroydec(rr)                        \
-  do                                          \
-  {                                           \
-    Expr *r = rr;                             \
-    int ref = r->data >> 9;                   \
-    ref = ref - 1;                            \
-    if (ref == 0)                             \
-    {                                         \
-      _e = r;                                 \
-      goto start_destroy;                     \
-    }                                         \
-    else                                      \
-      r->data = (ref << 9) | (r->data & 511); \
+#define destroydec(rr)                         \
+  do                                           \
+  {                                            \
+    Expr *r = rr;                              \
+    int ref = r->data >> 9;                    \
+    ref = ref < d_maxRefCount ? ref - 1 : ref; \
+    if (ref == 0)                              \
+    {                                          \
+      _e = r;                                  \
+      goto start_destroy;                      \
+    }                                          \
+    else                                       \
+      r->data = (ref << 9) | (r->data & 511);  \
   } while (0)
 
 // removed from below "ref = ref -1;":   r->debugrefcnt(ref,DEC);
@@ -159,7 +160,14 @@ Expr *Expr::clone()
           var->val = newvar;
           Expr *bod = e->kids[1]->clone();
           var->val = prev;
-          return new CExpr(LAM, newvar, bod);
+          CExpr* r = new CExpr(LAM, newvar, bod);
+          // Lambdas which have `cloned` set should never have the no-clone
+          // optimization applied, even after cloning. Propagate this.
+          if (e->cloned())
+          {
+            r->setcloned();
+          }
+          return r;
         }
         case PI: {
 #ifdef DEBUG_SYM_NAMES
@@ -260,7 +268,7 @@ Expr *Expr::make_app(Expr *e1, Expr *e2)
 
 int Expr::cargCount = 0;
 
-Expr *Expr::collect_args(std::vector<Expr *> &args, bool follow_defs)
+Expr *Expr::collect_args(std::vector<Expr *> &args, bool follow_defs) const
 {
   // cargCount++;
   // if( cargCount%1000==0)
@@ -719,9 +727,9 @@ static void print_vector(ostream &os, const vector<Expr *> &v)
   }
 }
 
-void Expr::print(ostream &os)
+void Expr::print(ostream &os) const
 {
-  CExpr *e = (CExpr *)this;  // for CEXPR cases
+  const CExpr *e = (const CExpr *)this;  // for CEXPR cases
 
   // std::cout << e->getop() << " ";
   /*
@@ -1037,14 +1045,18 @@ bool Expr::isType(Expr *statType)
   return true;
 }
 
-int SymExpr::symmCount = 0;
 int SymExpr::mark()
 {
   if (mark_map.find(this) == mark_map.end())
   {
-    symmCount++;
     mark_map[this] = 0;
   }
   return mark_map[this];
 }
 void SymExpr::smark(int m) { mark_map[this] = m; }
+
+std::ostream& operator<<(std::ostream& o, const Expr& e)
+{
+  e.print(o);
+  return o;
+}

@@ -5,7 +5,9 @@ Authors: Andy Reynolds and Aaron Stump
 
 ## Building LFSC checker
 
-You need cmake (>= version 2.8.9) to build LFSC Checker.
+You need cmake (>= version 2.8.9), gmp, and flex to build LFSC Checker.
+
+On macOS, we recommend installing gmp and flex using homebrew.
 
 To build a regular build, issue:
 
@@ -136,3 +138,9 @@ svn co https://svn.divms.uiowa.edu/repos/clc/clsat/trunk clsat
 ```
 
 should produce proofs compatible with the current version of sat.plf.
+
+## Build Debugging
+
+Sometime CMake may have a difficult time finding FLEX on your system. It can
+be helpful to set the `CMAKE_INCLUDE_PATH` path to the location of your flex
+installation.

@@ -6,7 +6,6 @@
 
 #include "code.h"
 #include "expr.h"
-#include "libwriter.h"
 #include "sccwriter.h"
 #include "trie.h"
 #ifndef _MSC_VER
@@ -16,7 +15,6 @@
 #include <time.h>
 #include <stack>
 #include <utility>
-#include "print_smt2.h"
 #include "scccode.h"
 
 using namespace std;
@@ -24,7 +22,9 @@ using namespace std;
 using namespace __gnu_cxx;
 #endif
 
+/** Map from program names to expressions */
 symmap2 progs;
+
 std::vector<Expr *> ascHoles;
 
 Trie<pair<Expr *, Expr *> > *symbols = new Trie<pair<Expr *, Expr *> >;
@@ -36,6 +36,37 @@ std::vector<std::pair<std::string, std::pair<Expr *, Expr *> > >
 
 bool tail_calls = true;
 bool big_check = true;
+
+/**
+ * Defines that the variable sym should be bound to definition e. Adds s -> sym
+ * to the global symbol table (symbols). Returns the result of adding
+ * (sym, t) to the symbol table (Trie::insert).
+ *
+ * We apply weak head reduction (whr) to the definition e. This is key to
+ * performance, since we want to remember the result of this expansion.
+ * Otherwise, additional copies of e->whr() will be generated each time we
+ * require computing it. Note that this is only done for the *top-level*
+ * application of e (if it is one). Other subterms of e are not reduced.
+ */
+std::pair<Expr*, Expr*> insertAndBindSymbol(const char* s,
+                                            SymExpr* sym,
+                                            Expr* e,
+                                            Expr* t)
+{
+  // apply whr() if possible to e
+  if (e->getop() == APP)
+  {
+    Expr* er = ((CExpr*)e)->whr();
+    if (er != e)
+    {
+      er->inc();
+      e->dec();
+      e = er;
+    }
+  }
+  sym->val = e;
+  return symbols->insert(s, std::pair<Expr*, Expr*>(sym, t));
+}
 
 Expr *call_run_code(Expr *code)
 {
@@ -185,6 +216,32 @@ start_check:
             return 0;
           }
         }
+        case Token::Arrow:
+        {  // the arrow case
+          DeclList decls = check_decl_list(create);
+          Expr* ret_kind;
+          Expr* ret = check(create, nullptr, &ret_kind);
+          for (auto binding_it = decls.old_bindings.rbegin();
+               binding_it != decls.old_bindings.rend();
+               ++binding_it)
+          {
+            const auto& binding = *binding_it;
+            symbols->insert(get<0>(binding).c_str(),
+                            {get<1>(binding), get<2>(binding)});
+          }
+          eat_rparen();
+          auto p = build_validate_pi(move(decls.decls), ret, ret_kind, create);
+          if (expected)
+          {
+            // Checked by build-validate pi
+            p.second->dec();
+          }
+          else
+          {
+            *computed = p.second;
+          }
+          return p.first;
+        }
         case Token::Pound:
         {
           // Annotated lambda case
@@ -231,13 +288,32 @@ start_check:
           eat_rparen();
           CExpr *tmp = new CExpr(PI, sym, domain, rec_computed);
           tmp->calc_free_in();
+          if (tmp->get_free_in())
+          {
+            std::ostringstream o;
+            o << "The type of an annotated lambda is dependent."
+              << "\n1. The type    : ";
+            tmp->print(o);
+            o << "\n2. The variable: ";
+            sym->print(o);
+            o << "\n3. The body    : ";
+            range->print(o);
+            report_error(o.str());
+          }
+          // Since `sym` is the SymSExpr used inside the *value* of this
+          // Lambda, having it also be in the type would cause type-checking
+          // bindings to change the value.
+          //
+          // We change the type's symbol to avoid this.
+          tmp->kids[0] = new SymSExpr(id);
           *computed = static_cast<Expr*>(tmp);
 
           symbols->insert(id.c_str(), prev);
           if (create)
           {
-            CExpr *ret = new CExpr(PI, sym, domain, range);
-            ret->calc_free_in();
+            CExpr* ret = new CExpr(LAM, sym, range);
+            // Mark this as "cloned" to block no-clone optimization
+            ret->setcloned();
             return ret;
           }
           return 0;
@@ -381,65 +457,27 @@ start_check:
                          + string(" a disallowed position."));
 
           Expr *code = read_code();
-          // string errstr = (string("The first argument in a run expression
-          // must be")
-          //   +string(" a call to a program.\n1. the argument: ")
-          //   +code->toString());
 
-          /* determine expected type of the result term, and make sure
-             the code term is an allowed one. */
-#if 0
-      Expr *progret;
-      if (code->isArithTerm())
-        progret = statMpz;
-      else {
-        if (code->getop() != APP)
-          report_error(errstr);
-
-        CExpr *call = (CExpr *)code;
-
-        // prog is not known to be a SymExpr yet
-        CExpr *prog = (CExpr *)call->get_head();
-
-        if (prog->getop() != PROG)
-          report_error(errstr);
-
-        progret = prog->kids[0]->get_body();
-      }
-#else
-          Expr *progret = NULL;
-          if (code->isArithTerm())
-            progret = statMpz;
-          else
-          {
-            if (code->getop() == APP)
-            {
-              CExpr *call = (CExpr *)code;
-
-              // prog is not known to be a SymExpr yet
-              CExpr *prog = (CExpr *)call->get_head();
-
-              if (prog->getop() == PROG) progret = prog->kids[0]->get_body();
-            }
-          }
-#endif
+          // compute the type of the left hand side of the run statement
+          Expr *progret = check_code(code);
           /* determine expected type of the result term, and make sure
                   the code term is an allowed one. */
-          // Expr* progret = check_code( code );
 
           /* the next term cannot be a hole where run expressions are
              introduced. When they are checked in applications, it can be. */
           int prev = open_parens;
-          if (progret) progret->inc();
+          progret->inc();
           Expr *trm = check(true, progret);
           eat_excess(prev);
           eat_rparen();
 
           if (expected->getop() != TYPE)
+          {
             report_error(
                 string("The expected type for a run expression is not ")
                 + string("\"type\".\n") + string("1. The expected type: ")
                 + expected->toString());
+          }
           expected->dec();
           return new CExpr(RUN, code, trm);
         }
@@ -491,10 +529,8 @@ start_check:
           Expr *trm = check(true, NULL, &tp_of_trm);
           eat_excess(prev_open);
 
-          sym->val = trm;
-
-          pair<Expr *, Expr *> prevpr =
-              symbols->insert(id.c_str(), pair<Expr *, Expr *>(sym, tp_of_trm));
+          pair<Expr*, Expr*> prevpr =
+              insertAndBindSymbol(id.c_str(), sym, trm, tp_of_trm);
           Expr *prev = prevpr.first;
           Expr *prevtp = prevpr.second;
 
@@ -667,12 +703,14 @@ start_check:
                 for (int i = 0, iend = holes.size(); i < iend; i++)
                 {
                   if (!holes[i]->val)
+                  {
                     /* if the hole is free in the domain, we will be filling
                        it in when we make our tail call, since the domain
                        is the expected type for the argument */
                     if (!headtp_domain->free_in(holes[i]))
                       report_error(string("A hole was left unfilled after ")
                                    + string("checking an application.\n"));
+                  }
                   holes[i]->dec();
                 }
 
@@ -848,7 +886,7 @@ start_check:
       if (create)
       {
         mpz_t num;
-        if (mpz_init_set_str(num, s_lexer->YYText(), 10) == -1)
+        if (mpz_init_set_str(num, token_str(), 10) == -1)
           report_error("Error reading a numeral.");
         return new IntExpr(num);
       }
@@ -877,7 +915,7 @@ start_check:
       {
         mpq_t num;
         mpq_init(num);
-        if (mpq_set_str(num, s_lexer->YYText(), 10) == -1)
+        if (mpq_set_str(num, token_str(), 10) == -1)
           report_error("Error reading a numeral.");
         return new RatExpr(num);
       }
@@ -890,7 +928,7 @@ start_check:
     // (contextual) keyword identifiers
     default:
     {
-      string id(s_lexer->YYText());
+      string id(token_str());
       pair<Expr *, Expr *> p = symbols->get(id.c_str());
       Expr *ret = p.first;
       Expr *rettp = p.second;
@@ -933,9 +971,153 @@ start_check:
   return 0;
 }
 
-int check_time;
+std::pair<std::string, Expr*> check_decl_list_item()
+{
+  Token::Token t = next_token();
+  if (t == Token::Open)
+  {
+    Token::Token t2 = next_token();
+    if (t2 == Token::Colon)
+    {
+      // The (: NAME TYPE) case
+      string id(prefix_id());
+      Expr* ty = check(true, statType);
+      eat_token(Token::Close);
+      return {id, ty};
+    }
+    else
+    {
+      // This is a TYPE case, that starts with tokens: '(' and t2, where t2 is
+      // not `:`.
+      // We reinsert those tokens to the stream, and check TYPE.
+      reinsert_token(t2);
+      reinsert_token(t);
+      Expr* dummy;
+      Expr* ty = check(true, nullptr, &dummy);
+      dummy->dec();
+      return {"", ty};
+    }
+  }
+  else
+  {
+    // This is a TYPE case, that starts with token: '('.
+    // We reinsert it an check TYPE.
+    reinsert_token(t);
+    Expr* ty = check(true, statType);
+    return {"", ty};
+  }
+}
 
-void check_file(const char *_filename, args a, sccwriter *scw, libwriter *lw)
+DeclList check_decl_list(const bool create)
+{
+  std::vector<std::tuple<std::string, Expr*, Expr*>> old_bindings;
+  std::vector<std::pair<Expr*, Expr*>> decls;
+  // Eat opening '('
+  eat_token(Token::Open);
+  Token::Token t = next_token();
+  // While the list is unclosed
+  while (t != Token::Close)
+  {
+    // Another item in the declaration list.
+    reinsert_token(t);
+    // Get the (ident, type) pair of the item.
+    std::pair<std::string, Expr*> p = check_decl_list_item();
+    Expr* sym;
+    // Check whether this declaration binds an identifier (has non-empty ident)
+    if (p.first.size())
+    {
+      // It does. Create the symbol, bind it, save the old binding.
+#ifdef DEBUG_SYM_NAMES
+      sym = new SymSExpr(p.first, SYMS_EXPR);
+#else
+      sym = new SymExpr(p.first);
+#endif
+      auto o = symbols->insert(p.first.c_str(), {sym, p.second});
+      old_bindings.push_back({p.first, o.first, o.second});
+    }
+    else
+    {
+      // It does not. Create a "_" symbol. Do not bind it.
+      string id("_");
+#ifdef DEBUG_SYM_NAMES
+      sym = new SymSExpr(id, SYMS_EXPR);
+#else
+      sym = new SymExpr(id);
+#endif
+    }
+    // If creating, save this (symbol, type) pair in the list.
+    if (create)
+    {
+      decls.emplace_back(sym, p.second);
+    }
+    t = next_token();
+  }
+  // We've closed the list
+  return {decls, old_bindings};
+}
+
+std::pair<Expr*, Expr*> build_validate_pi(
+    std::vector<std::pair<Expr*, Expr*>>&& args,
+    Expr* ret,
+    Expr* ret_kind,
+    bool create)
+{
+  // Check that the resulting kind is TYPE or KIND
+  if (ret_kind->getop() == TYPE || ret_kind->getop() == KIND)
+  {
+    if (create)
+    {
+      // If we should create the body, do so.
+      for (size_t i = args.size() - 1; i < args.size(); --i)
+      {
+        ret = new CExpr(PI, args[i].first, args[i].second, ret);
+        ret->calc_free_in();
+      }
+      return {ret, ret_kind};
+    }
+  }
+  else
+  {
+    report_error(string("Invalid Pi-range: ") + ret->toString());
+  }
+  // We're not creating the body.
+  return {nullptr, ret_kind};
+}
+
+std::pair<Expr*, Expr*> build_macro(std::vector<std::pair<Expr*, Expr*>>&& args,
+                                    Expr* ret,
+                                    Expr* ret_ty)
+{
+  // For each argument, add a layer of nesting.
+  for (size_t i = args.size() - 1; i < args.size(); --i)
+  {
+    args[i].second->inc();
+    CExpr* tmp = new CExpr(PI, args[i].first, args[i].second, ret_ty);
+    tmp->calc_free_in();
+    // Assert that the type is not dependent.
+    if (tmp->get_free_in())
+    {
+      std::ostringstream o;
+      o << "The type of an annotated lambda is dependent."
+        << "\n1. The type    : " << *ret_ty
+        << "\n2. The variable: " << *args[i].first
+        << "\n3. The body    : " << *ret;
+      report_error(o.str());
+    }
+    // Replace the symbol in the type with a copy, so that there isn't "same
+    // symbol" confusion between the value and the type.
+    // This doesn't break any references to the symbol, because there are no
+    // reference to the symbol in the type---it's not dependent!
+    tmp->kids[0] = new SymSExpr(static_cast<SymSExpr*>(args[i].first)->s);
+    ret = new CExpr(LAM, args[i].first, ret);
+    // Mark this as "cloned" to block no-clone optimization
+    ret->setcloned();
+    ret_ty = tmp;
+  }
+  return {ret, ret_ty};
+}
+
+void check_file(const char* _filename, args a, sccwriter* scw)
 {
   std::ifstream fs;
   fs.open(_filename, std::fstream::in);
@@ -945,15 +1127,21 @@ void check_file(const char *_filename, args a, sccwriter *scw, libwriter *lw)
     report_error(string("Could not open file \"") + _filename
                  + string("\" for reading.\n"));
   }
-  check_file(fs, filenameString, a, scw, lw);
+  check_file(fs, filenameString, a, scw);
   fs.close();
+}
+
+void rebind_error(const std::string& id)
+{
+  stringstream o;
+  o << "The top-level identifier \"" << id << "\" was already bound";
+  report_error(o.str());
 }
 
 void check_file(std::istream& in,
                 const std::string& _filename,
                 args a,
-                sccwriter* scw,
-                libwriter* lw)
+                sccwriter* scw)
 {
   // from code.h
   dbg_prog = a.show_runs;
@@ -984,11 +1172,12 @@ void check_file(std::istream& in,
           if (o == KIND)
             report_error(string("Kind-level definitions are not supported.\n"));
           SymSExpr* s = new SymSExpr(id);
-          s->val = t;
-          pair<Expr*, Expr*> prev =
-              symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, ttp));
-          if (prev.first) prev.first->dec();
-          if (prev.second) prev.second->dec();
+          // insert and bind the symbol
+          pair<Expr*, Expr*> prev = insertAndBindSymbol(id.c_str(), s, t, ttp);
+          if (prev.first || prev.second)
+          {
+            rebind_error(id);
+          }
           break;
         }
         case Token::Declare:
@@ -1010,37 +1199,139 @@ void check_file(std::istream& in,
           SymSExpr* s = new SymSExpr(id);
           pair<Expr*, Expr*> prev =
               symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, t));
-          if (lw) lw->add_symbol(s, t);
-          if (prev.first) prev.first->dec();
-          if (prev.second) prev.second->dec();
+          if (prev.first || prev.second)
+          {
+            rebind_error(id);
+          }
+          break;
+        }
+        case Token::DeclareRule:
+        {
+          // Form: (declare-rule NAME DECL_LIST RESULT)
+          // equivalent to: (declare NAME (! decl0id decl0ty (! decl1id decl1ty ... RESULT)))
+          string id(prefix_id());
+          DeclList decls = check_decl_list(true);
+          Expr* ret_kind;
+          Expr* ret = check(true, nullptr, &ret_kind);
+          // Restore bindings overwritten by decl list
+          for (auto binding_it = decls.old_bindings.rbegin();
+               binding_it != decls.old_bindings.rend();
+               ++binding_it)
+          {
+            const auto& binding = *binding_it;
+            symbols->insert(get<0>(binding).c_str(),
+                            {get<1>(binding), get<2>(binding)});
+          }
+          pair<Expr*, Expr*> p =
+              build_validate_pi(move(decls.decls), ret, ret_kind, true);
+          p.second->dec();
+          SymSExpr* s = new SymSExpr(id);
+          pair<Expr*, Expr*> prev =
+              symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, p.first));
+          if (prev.first || prev.second)
+          {
+            rebind_error(id);
+          }
+          break;
+        }
+        case Token::DeclareType:
+        {
+          // Form: (declare-type NAME DECL_LIST)
+          // equivalent to: (declare NAME (! decl0id decl0ty (! decl1id decl1ty ... type)))
+          string id(prefix_id());
+          DeclList decls = check_decl_list(true);
+          // Restore bindings overwritten by decl list
+          for (auto binding_it = decls.old_bindings.rbegin();
+               binding_it != decls.old_bindings.rend();
+               ++binding_it)
+          {
+            const auto& binding = *binding_it;
+            symbols->insert(get<0>(binding).c_str(),
+                            {get<1>(binding), get<2>(binding)});
+          }
+          pair<Expr*, Expr*> p =
+              build_validate_pi(move(decls.decls), statType, statKind, true);
+          p.second->dec();
+          SymSExpr* s = new SymSExpr(id);
+          pair<Expr*, Expr*> prev =
+              symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, p.first));
+          if (prev.first || prev.second)
+          {
+            rebind_error(id);
+          }
+          break;
+        }
+        case Token::DefineConst:
+        {
+          // Form: (define-const NAME DECL_LIST RESULT)
+          // equivalent to: (define NAME (% decl0id decl0ty (% decl1id decl1ty ... RESULT)))
+          string id(prefix_id());
+          DeclList decls = check_decl_list(true);
+          Expr* ret_ty;
+          Expr* ret = check(true, nullptr, &ret_ty);
+          pair<Expr*, Expr*> macro =
+              build_macro(move(decls.decls), ret, ret_ty);
+          // Restore bindings overwritten by decl list
+          for (auto binding_it = decls.old_bindings.rbegin();
+               binding_it != decls.old_bindings.rend();
+               ++binding_it)
+          {
+            const auto& binding = *binding_it;
+            symbols->insert(get<0>(binding).c_str(),
+                            {get<1>(binding), get<2>(binding)});
+          }
+          SymSExpr* s = new SymSExpr(id);
+          pair<Expr*, Expr*> prev =
+              insertAndBindSymbol(id.c_str(), s, macro.first, macro.second);
+          if (prev.first || prev.second)
+          {
+            rebind_error(id);
+          }
           break;
         }
         case Token::Check:
+        case Token::CheckAssuming:
         {
+          // check and check-assuming combined case
           if (run_scc)
           {
             init_compiled_scc();
           }
-          Expr* computed;
-          big_check = true;
           int prev = open_parens;
-          (void)check(false, 0, &computed, NULL, true);
-
-          // print out ascription holes
-          for (int a = 0; a < (int)ascHoles.size(); a++)
+          if (c == Token::Check)
           {
-#ifdef PRINT_SMT2
-            print_smt2(ascHoles[a], std::cout);
-#else
-            ascHoles[a]->print(std::cout);
-#endif
-            std::cout << std::endl;
+            Expr* computed;
+            big_check = true;
+            (void)check(false, 0, &computed, NULL, true);
+
+            // print out ascription holes
+            for (int a = 0; a < (int)ascHoles.size(); a++)
+            {
+              ascHoles[a]->print(std::cout);
+              std::cout << std::endl;
+            }
+            if (!ascHoles.empty()) std::cout << std::endl;
+            ascHoles.clear();
+            computed->dec();
           }
-          if (!ascHoles.empty()) std::cout << std::endl;
-          ascHoles.clear();
+          else  // CheckAssuming
+          {
+            DeclList decls = check_decl_list(false);
+            Expr* ex_type = check(true, statType, nullptr);
+            // consumes the `ex_type` reference
+            (void)check(false, ex_type, nullptr);
+            for (auto binding_it = decls.old_bindings.rbegin();
+                 binding_it != decls.old_bindings.rend();
+                 ++binding_it)
+            {
+              const auto& binding = *binding_it;
+              symbols->insert(get<0>(binding).c_str(),
+                              {get<1>(binding), get<2>(binding)});
+            }
+          }
 
           // clean up local symbols
-          for (int a = 0; a < (int)local_sym_names.size(); a++)
+          for (int a = local_sym_names.size()-1; a >= 0; --a)
           {
             symbols->insert(local_sym_names[a].first.c_str(),
                             local_sym_names[a].second);
@@ -1050,7 +1341,7 @@ void check_file(std::istream& in,
 
           eat_excess(prev);
 
-          computed->dec();
+          std::cout << "success" << std::endl;
           // cleanup();
           // exit(0);
           break;
@@ -1069,8 +1360,10 @@ void check_file(std::istream& in,
           SymSExpr* s = new SymSExpr(id);
           pair<Expr*, Expr*> prev =
               symbols->insert(id.c_str(), pair<Expr*, Expr*>(s, ttp));
-          if (prev.first) prev.first->dec();
-          if (prev.second) prev.second->dec();
+          if (prev.first || prev.second)
+          {
+            rebind_error(id);
+          }
           break;
         }
         case Token::Run:
@@ -1079,7 +1372,7 @@ void check_file(std::istream& in,
           check_code(code);
           cout << "[Running-sc ";
           code->print(cout);
-          Expr* tmp = run_code(code);
+          Expr* tmp = call_run_code(code);
           cout << "] = \n";
           if (tmp)
           {
@@ -1093,6 +1386,7 @@ void check_file(std::istream& in,
           break;
         }
         case Token::Program:
+        case Token::Function:
         {
           string progstr(prefix_id());
           SymSExpr* prog = new SymSExpr(progstr);
@@ -1100,6 +1394,12 @@ void check_file(std::istream& in,
             report_error(string("Redeclaring program ") + progstr
                          + string("."));
           progs[progstr] = prog;
+          // if used the "function" keyword, we mark the program as a function
+          // such that its results are cached in calls to run_code.
+          if (c == Token::Function)
+          {
+            markProgramAsFunction(prog);
+          }
           eat_token(Token::Open);
           Token::Token d;
           vector<Expr*> vars;
@@ -1219,7 +1519,10 @@ void check_file(std::istream& in,
                                 Token::Opaque,
                                 Token::Run,
                                 Token::Check,
-                                Token::Program})
+                                Token::Program,
+                                Token::DeclareRule,
+                                Token::DeclareType,
+                                Token::DefineConst})
           {
             msg << "\n\t" << t;
           }
@@ -1237,6 +1540,8 @@ void check_file(std::istream& in,
       unexpected_token_error(c, "Top-level commands must start with parentheses");
     }
   }
+
+  delete s_lexer;
 }
 
 class Deref : public Trie<pair<Expr *, Expr *> >::Cleaner
@@ -1329,8 +1634,11 @@ Expr* compute_kind(Expr* e)
                          + string(" applied to some arguments, but that "
                                   "expression is not a function"));
           }
-          for (const auto& p : prev_pi_vars_and_values)
+          for (auto p_it = prev_pi_vars_and_values.rbegin();
+               p_it != prev_pi_vars_and_values.rend();
+               ++p_it)
           {
+            const auto& p = *p_it;
             p.first->val = p.second;
           }
           return head;

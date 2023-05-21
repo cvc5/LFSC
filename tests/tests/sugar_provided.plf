@@ -1,0 +1,11 @@
+(declare bool type)
+(declare tt bool)
+(declare ff bool)
+
+(program bool_or ((a bool) (b bool)) bool
+         (match a
+                (tt tt)
+                (ff b)))
+
+(declare is_or (! a bool (! b bool (! sc (^ (bool_or a b) tt) type))))
+(declare is_or_2 (! a bool (! b bool (! sc (provided (bool_or a b) tt) type))))
