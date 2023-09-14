@@ -11,6 +11,7 @@
 #include <string>
 
 #include "token.h"
+#include <cstdint>
 
 struct Location {
   uint32_t line;
